@@ -3,7 +3,7 @@
  * @author sivan
  * @description tools
  */
-namespace Job\Lib;
+namespace Lib;
 
 trait JobTool
 {
@@ -13,7 +13,7 @@ trait JobTool
      * @param $length
      * @return array
      */
-    public function intToByteArray($length)
+    public static function intToByteArray($length)
     {
         $byte_arr = [
             $length >> 24 & 0xff,
@@ -31,7 +31,7 @@ trait JobTool
      * @param $byte_arr
      * @return string
      */
-    public function convertByteArrToStr($byte_arr)
+    public static function convertByteArrToStr($byte_arr)
     {
         $convert_str = '';
 
@@ -48,7 +48,7 @@ trait JobTool
      * @param $str
      * @return array
      */
-    public function convertStrToBytes($str)
+    public static function convertStrToBytes($str)
     {
         $len = strlen($str);
 
@@ -69,7 +69,7 @@ trait JobTool
     /**
      * 扫描所有的任务
      */
-    public function getAllJobs()
+    public static function getAllJobs()
     {
         // @todo 扫描全部的任务执行
     }
@@ -81,7 +81,7 @@ trait JobTool
      * @param $log_data
      * @param $file_name
      */
-    public function recordLog($log_data, $file_name)
+    public static function recordLog($log_data, $file_name)
     {
 
     }
@@ -89,7 +89,7 @@ trait JobTool
     /**
      * 操作tips
      */
-    public function tips()
+    public static function tips()
     {
         echo "welcome to use Swoole-Controller,we can help you to monitor your swoole server!" . PHP_EOL;
         echo "please input server name and cmd:  php swoole.php myServerName start " . PHP_EOL;
@@ -108,18 +108,53 @@ trait JobTool
      * @param $rpc_protocol
      * @return int|mixed
      */
-    public function getDataStream($stream_data, $rpc_protocol)
+    public static function getDataStream($stream_data, $rpc_protocol)
     {
         $rpc_protocol = strtolower($rpc_protocol);
         switch ($rpc_protocol) {
             case 'json':
-                $stream_data = $this->unpackJackson($stream_data);
+                $stream_data = self::unpackJackson($stream_data);
                 break;
             default:
                 return 0;
         }
 
         return $stream_data;
+    }
+
+    /**
+     * @param $serverName
+     * @return array
+     */
+    public static function getServerIni($serverName)
+    {
+        $configPath = CONF_PATH . $serverName . ".ini";
+        if (!file_exists($configPath)) {
+            return ['code' => 404, 'msg' => 'missing config path' . $configPath];
+        }
+        $config = parse_ini_file($configPath, true);
+        return ['code' => 0, 'conf' => $config];
+    }
+
+    /**
+     * @param $msg
+     */
+    public static function serverMasterLog($msg)
+    {
+        error_log($msg . PHP_EOL, 3, '/tmp/SuperMaster.log');
+    }
+
+    public static function startServer($phpStart, $cmd, $name)
+    {
+
+    }
+
+    /**
+     * @param $msg
+     */
+    public static function serverMasterLogTimer($msg)
+    {
+        error_log($msg . PHP_EOL, 3, '/tmp/SuperMasterTimer.log');
     }
 
     /**
@@ -130,17 +165,17 @@ trait JobTool
      * @param null $error_msg
      * @return mixed
      */
-    public function outputStream($result, $request_id, $error_msg = null)
+    public static function outputStream($result, $request_id, $error_msg = null)
     {
         $main_json = json_encode(['result' => $result, 'requestId' => $request_id, 'errorMsg' => $error_msg]);
 
-        $main_json_bytes = $this->convertStrToBytes($main_json);
+        $main_json_bytes = self::convertStrToBytes($main_json);
 
-        $json_len_bytes = $this->intToByteArray($main_json_bytes);
+        $json_len_bytes = self::intToByteArray($main_json_bytes);
 
         $output_data = array_merge($json_len_bytes, $main_json_bytes);
 
-        return $this->convertByteArrToStr($output_data);
+        return self::convertByteArrToStr($output_data);
     }
 
     /**
@@ -149,7 +184,7 @@ trait JobTool
      * @param $stream_data
      * @return mixed
      */
-    protected function unpackJackson($stream_data)
+    protected static function unpackJackson($stream_data)
     {
         $stream_data = preg_replace('/[\x00-\x1F]/', '', $stream_data);
 

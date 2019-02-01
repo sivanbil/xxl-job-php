@@ -5,7 +5,7 @@
  * Date: 2019/2/1
  * Time: 11:08 AM
  */
-namespace Job\Lib;
+namespace Lib;
 
 class Cmd
 {
@@ -26,5 +26,25 @@ class Cmd
     public static function exec($argv)
     {
         // 具体执行逻辑
+
+    }
+
+
+    /**
+     * 获取所有支持的命令
+     *
+     * @return array
+     */
+    public static function getSupportCmds()
+    {
+        return [
+            'start', 'stop', 'reload', 'restart',
+            'shutdown', 'status', 'list', 'startAll'
+        ];
+    }
+
+    public static function printCmdHelp()
+    {
+        self::tips();
     }
 }

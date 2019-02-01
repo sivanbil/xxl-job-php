@@ -5,7 +5,7 @@
  * Date: 2019/2/1
  * Time: 3:26 PM
  */
-namespace Job\Lib;
+namespace Lib;
 
 class Queue
 {

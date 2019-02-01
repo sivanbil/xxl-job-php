@@ -3,7 +3,7 @@
  * @author sivan
  * @description 进程管理
  */
-namespace Job\Lib;
+namespace Lib;
 
 class Process
 {

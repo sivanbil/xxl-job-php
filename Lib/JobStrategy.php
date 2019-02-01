@@ -3,7 +3,7 @@
  * @author sivan
  * @description job strategy
  */
-namespace Job\Lib;
+namespace Lib;
 
 class JobStrategy
 {

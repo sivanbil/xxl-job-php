@@ -3,7 +3,7 @@
  * @author sivan
  * @description tcp server class
  */
-namespace Job\Lib;
+namespace Lib;
 
 class TcpServer extends Swoole\Server
 {
