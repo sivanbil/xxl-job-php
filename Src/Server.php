@@ -7,8 +7,25 @@
  */
 namespace Src;
 
-class Server
+use Lib\TcpServer;
+
+class Server extends TcpServer
 {
+
+    public $server;
+
+    public function __construct($conf) {
+        $this->server = new swoole_server($conf['server']['ip'], $conf['server']['port']);
+        $this->server->set($conf['setting']);
+
+        $this->server->on('Start',   [$this, 'onStart']);
+        $this->server->on('Connect', [$this, 'onConnect']);
+        $this->server->on('Receive', [$this, 'onReceive']);
+        $this->server->on('Close',   [$this, 'onClose']);
+
+        $this->server->start();
+    }
+
     public function onStart( $server )
     {
 

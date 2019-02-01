@@ -9,11 +9,6 @@ class TcpServer extends Swoole\Server
 {
     use JobTool;
 
-    public function __construct($server, $port)
-    {
-
-    }
-
     public function heartBeat()
     {
 
