@@ -12,6 +12,7 @@ class Process
     {
 
     }
+
     // 进程等待
     public static function wait()
     {
