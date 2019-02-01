@@ -26,6 +26,8 @@ class Cmd
     public static function exec($argv)
     {
         // 具体执行逻辑
+
+        // 进程检测
     }
 
 

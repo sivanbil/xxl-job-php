@@ -7,10 +7,18 @@ namespace Lib;
 
 class Process
 {
-    // 创建并启动进程
-    public static function start()
+    public $mpid = 0;
+
+    public function __construct()
     {
 
+    }
+
+    // 创建并启动进程
+    public function start()
+    {
+        swoole_set_process_name(sprintf('php-ps:%s', 'master'));
+        $this->mpid = posix_getpid();
     }
 
     // 进程等待
