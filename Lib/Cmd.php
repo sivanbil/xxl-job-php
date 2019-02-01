@@ -26,7 +26,6 @@ class Cmd
     public static function exec($argv)
     {
         // 具体执行逻辑
-
     }
 
 
@@ -43,8 +42,20 @@ class Cmd
         ];
     }
 
-    public static function printCmdHelp()
+    /**
+     * 检测命令行传参
+     *
+     * @param $argv
+     * @return bool
+     */
+    public static function checkArgvValid($argv)
     {
-        self::tips();
+        $cmd = array_pop($argv);
+        $cmd = strtolower($cmd);
+        if (in_array($cmd, self::getSupportCmds())) {
+            return true;
+        }
+        // 检测命令是否OK
+        return false;
     }
 }
