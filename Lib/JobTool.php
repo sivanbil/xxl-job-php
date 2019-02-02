@@ -76,32 +76,6 @@ trait JobTool
 
 
     /**
-     * 记录日志
-     *
-     * @param $log_data
-     * @param $file_name
-     */
-    public static function recordLog($log_data, $file_name)
-    {
-
-    }
-
-    /**
-     * 操作tips
-     */
-    public static function tips()
-    {
-        echo "welcome to use Swoole-Controller,we can help you to monitor your swoole server!" . PHP_EOL;
-        echo "please input server name and cmd:  php swoole.php myServerName start " . PHP_EOL;
-        echo "support cmds: start stop reload restart status startall list" . PHP_EOL;
-        echo "if you want to stop Swoole-Controller please input :  php swoole.php shutdown" . PHP_EOL;
-        echo "if you want to know running servername please input :  php swoole.php status" . PHP_EOL;
-        echo "if you want to know server list that you can start please input :  php swoole.php list" . PHP_EOL;
-        echo "if you want to start all your servers please input :  php swoole.php startall" . PHP_EOL;
-        exit;
-    }
-
-    /**
      * 获取数据流并流入不同的解包器中
      *
      * @param $stream_data
@@ -128,7 +102,7 @@ trait JobTool
      */
     public static function getServerIni($serverName)
     {
-        $configPath = CONF_PATH . $serverName . ".ini";
+        $configPath = CONF_PATH . '/' . $serverName . ".ini";
         if (!file_exists($configPath)) {
             return ['code' => 404, 'msg' => 'missing config path' . $configPath];
         }

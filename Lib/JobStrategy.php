@@ -7,7 +7,7 @@ namespace Lib;
 
 class JobStrategy
 {
-		// 串行
+    // 串行
     const SERIAL = 1;
     // 丢弃后续调度请求
     const DISCARD_NEXT_SCHEDULING = 2;

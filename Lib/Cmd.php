@@ -23,24 +23,28 @@ class Cmd
      * startAll 启动所有
      */
 
-    public static function exec($argv)
+    public static function exec($cmd, $name)
     {
-        // 具体执行逻辑
 
+        $running_server = [];
+        $server = self::getServerIni($name);
+        var_dump($server);
+        // 具体执行逻辑
         // 进程检测
     }
 
 
     /**
      * 获取所有支持的命令
-     *
+     * php Bin/index.php serverName start
+     * php Bin/index.php stop
      * @return array
      */
     public static function getSupportCmds()
     {
         return [
             'start', 'stop', 'reload', 'restart',
-            'shutdown', 'status', 'list', 'startAll'
+            'shutdown', 'status', 'list'
         ];
     }
 
@@ -50,14 +54,51 @@ class Cmd
      * @param $argv
      * @return bool
      */
-    public static function checkArgvValid($argv)
+    public static function checkArgvValid($cmd, $name)
     {
-        $cmd = array_pop($argv);
-        $cmd = strtolower($cmd);
-        if (in_array($cmd, self::getSupportCmds())) {
-            return true;
+        if (!$cmd || (!$name && ($cmd != 'status' && $cmd != 'shutdown' && $cmd != 'list')) || !in_array($cmd, self::getSupportCmds())) {
+            return false;
         }
-        // 检测命令是否OK
-        return false;
+
+        if ($cmd != 'status' && $cmd != 'shutdown' && $cmd != 'list') {
+            $server_path = CONF_PATH . '/' .$name . ".ini";
+            if (!file_exists($server_path)) {
+                echo "your server name  $name not exist" . PHP_EOL;
+                exit;
+            }
+        }
+
+        //输出所有可以执行的server
+        if ($cmd == 'list') {
+            $config_dir = CONF_PATH . "/*.ini";
+            $config_arr = glob($config_dir);
+            // 配置名必须是server name
+            echo "your server list：" . PHP_EOL;
+            foreach ($config_arr as $server_name) {
+                echo basename($server_name, '.ini') . PHP_EOL;
+            };
+            echo '----------------------------' . PHP_EOL;
+            exit;
+        }
+
+        if (!$name) {
+            echo "your server name is invalid：" . PHP_EOL;
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * 操作tips
+     */
+    public static function tips()
+    {
+        echo "please input server name and cmd:  php index.php myServerName start " . PHP_EOL;
+        echo "support cmds: start stop reload restart status list" . PHP_EOL;
+        echo "if you want to stop server please input :  php index.php shutdown" . PHP_EOL;
+        echo "if you want to know running server name please input :  php index.php status" . PHP_EOL;
+        echo "if you want to know server list that you can start please input :  php index.php list" . PHP_EOL;
+        exit;
     }
 }

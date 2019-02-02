@@ -7,6 +7,6 @@
  */
 namespace Lib;
 
-class Queue
+class Queue extends \Swoole\Server
 {
 }

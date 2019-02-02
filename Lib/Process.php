@@ -7,7 +7,7 @@ namespace Lib;
 
 class Process
 {
-    public $mpid = 0;
+    public static $mpid = 0;
 
     public function __construct()
     {
@@ -15,10 +15,10 @@ class Process
     }
 
     // 创建并启动进程
-    public function start()
+    public static function start()
     {
         swoole_set_process_name(sprintf('php-ps:%s', 'master'));
-        $this->mpid = posix_getpid();
+        static::$mpid = posix_getpid();
     }
 
     // 进程等待
@@ -49,5 +49,20 @@ class Process
     public static function daemon()
     {
         \swoole_process::daemon();
+    }
+
+    /**
+     * 检测进程是否存在
+     *
+     * @return bool
+     */
+    public static function processCheckExist()
+    {
+        $ret = system("ps aux | grep " . SUPER_PROCESS_NAME . " | grep -v grep ");
+        if (empty($ret)) {
+            return false;
+        } else {
+            return true;
+        }
     }
 }

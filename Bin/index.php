@@ -9,13 +9,15 @@
  */
 define('DEBUG', true);
 
-define('APP_PATH', __DIR__);
+define('APP_PATH', dirname(__DIR__));
 
 define('CONF_PATH', APP_PATH . '/Conf');
 
 define('LIB_PATH', APP_PATH . '/Lib');
 
 define('CRON_PATH', APP_PATH . '/Cron');
+
+define('SUPER_PROCESS_NAME', 'XXL-JOB-PHP-EXECUTOR');
 
 if (PHP_OS == 'WINNT') {
     define("NL", "\r\n");
@@ -31,9 +33,20 @@ require_once(LIB_PATH . '/Loader.php');
 spl_autoload_register('\\Lib\\Loader::autoload');
 
 // cli模式参数执行
-if (\Lib\Cmd::checkArgvValid($argv)) {
+$name = $argv[1];
+
+if (empty($argv[2])) {
+    $cmd = $name;
+
+    $name = '';
+} else {
+    $cmd = $argv[2];
+}
+
+// 检测参数
+if (\Lib\Cmd::checkArgvValid($cmd, $name)) {
     // 命令执行
-    \Lib\Cmd::exec($argv);
+    \Lib\Cmd::exec($cmd, $name);
 } else {
     // 操作提示
     \Lib\Cmd::tips();

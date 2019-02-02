@@ -12,36 +12,41 @@ use Lib\TcpServer;
 class Server extends TcpServer
 {
 
-    public $server;
+    use JobTool;
 
-    public function __construct($conf) {
-        $this->server = new swoole_server($conf['server']['ip'], $conf['server']['port']);
-        $this->server->set($conf['setting']);
-
-        $this->server->on('Start',   [$this, 'onStart']);
-        $this->server->on('Connect', [$this, 'onConnect']);
-        $this->server->on('Receive', [$this, 'onReceive']);
-        $this->server->on('Close',   [$this, 'onClose']);
-
-        $this->server->start();
-    }
-
-    public function onStart( $server )
+    // 心跳检测
+    public function heartBeat()
     {
 
     }
 
-    public function onConnect( $server, $fd, $from_id )
+    // 忙碌检测
+    public function idleBeat()
     {
 
     }
 
-    public function onReceive( swoole_server $server, $fd, $from_id, $data )
+    // 关闭
+    public function kill()
     {
 
     }
 
-    public function onClose( $server, $fd, $from_id )
+    // 记录日志
+    public function log()
     {
+
+    }
+
+    // 注册到任务调度中心
+    public function registerToJobCenter()
+    {
+
+    }
+
+    // 运行任务
+    public function run()
+    {
+
     }
 }
