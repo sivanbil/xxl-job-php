@@ -9,22 +9,24 @@ class Process
 {
     public static $mpid = 0;
 
-    public function __construct()
+    /**
+     * @param $server_info
+     * @return bool
+     */
+    public static function start($conf_info)
     {
+        // 创建并启动进程
+        $process = new \swoole_process(function (\swoole_process $worker) use ($conf_info) {
+            $worker->exec($conf_info['server']['php'], [SRC_PATH . "/index.php", json_encode($conf_info)]);
+        }, false);
+        $pid = $process->start();
 
-    }
-
-    // 创建并启动进程
-    public static function start()
-    {
-        swoole_set_process_name(sprintf('php-ps:%s', 'master'));
-        static::$mpid = posix_getpid();
-    }
-
-    // 进程等待
-    public static function wait()
-    {
-        \swoole_process::wait();
+        $wait_res = \swoole_process::wait();
+        if ($wait_res['code']) {
+            echo  "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
+            exit;
+        }
+        return true;
     }
 
     /**

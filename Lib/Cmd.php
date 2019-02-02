@@ -25,12 +25,27 @@ class Cmd
 
     public static function exec($cmd, $name)
     {
-
-        $running_server = [];
-        $server = self::getServerIni($name);
-        var_dump($server);
-        // 具体执行逻辑
         // 进程检测
+        if (Process::processCheckExist()) {
+            if ($cmd == 'shutdown') {
+
+            }
+        } else {
+            if ($cmd == 'start') {
+                $server_info = self::getServerIni($name);
+                // 执行server
+                if (Process::start($server_info['conf'])) {
+                    // 执行tcp server
+                    //TcpServer::start();
+                }
+            } else {
+                if ($cmd == 'shutdown' || $cmd == 'status') {
+                    echo SUPER_PROCESS_NAME . ' is not running, please check it' . PHP_EOL;
+                    exit;
+                }
+            }
+
+        }
     }
 
 
@@ -90,7 +105,7 @@ class Cmd
     }
 
     /**
-     * 操作tips
+     * 命令操作tips
      */
     public static function tips()
     {

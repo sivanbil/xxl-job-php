@@ -7,6 +7,7 @@
  */
 namespace Src;
 
+use Lib\JobTool;
 use Lib\TcpServer;
 
 class Server extends TcpServer

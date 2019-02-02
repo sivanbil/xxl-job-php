@@ -17,6 +17,8 @@ define('LIB_PATH', APP_PATH . '/Lib');
 
 define('CRON_PATH', APP_PATH . '/Cron');
 
+define('SRC_PATH', APP_PATH . '/Src');
+
 define('SUPER_PROCESS_NAME', 'XXL-JOB-PHP-EXECUTOR');
 
 if (PHP_OS == 'WINNT') {
