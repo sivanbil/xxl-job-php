@@ -19,7 +19,7 @@ class Process
         $process = new \swoole_process(function (\swoole_process $worker) use ($conf_info) {
             $worker->exec($conf_info['server']['php'], [SRC_PATH . "/index.php", json_encode($conf_info)]);
         }, false);
-        $pid = $process->start();
+        self::$mpid = $process->start();
 
         $wait_res = \swoole_process::wait();
         if ($wait_res['code']) {

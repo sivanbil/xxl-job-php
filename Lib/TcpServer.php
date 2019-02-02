@@ -7,6 +7,7 @@ namespace Lib;
 
 class TcpServer
 {
+    use JobTool;
     /**
      * @var \swoole_server
      */
@@ -21,38 +22,69 @@ class TcpServer
         $this->server->set($conf['setting']);
 
         // 注册回调事件
-        $this->server->on('Start',   [$this, 'onStart']);
-        $this->server->on('Connect', [$this, 'onConnect']);
-        $this->server->on('Receive', [$this, 'onReceive']);
-        $this->server->on('Close',   [$this, 'onClose']);
+        $this->server->on('start',   [$this, 'onStart']);
+        $this->server->on('connect', [$this, 'onConnect']);
+        $this->server->on('receive', [$this, 'onReceive']);
+        $this->server->on('close',   [$this, 'onClose']);
     }
 
-    public function onStart( $server )
+    /**
+     * @param $name
+     */
+    public function setProcessName($name)
     {
-
+        if (function_exists('cli_set_process_title')) {
+            cli_set_process_title($name);
+        } else if (function_exists('swoole_set_process_name')) {
+            swoole_set_process_name($name);
+        } else {
+            trigger_error(__METHOD__ . " failed. require cli_set_process_title or swoole_set_process_name.");
+        }
     }
 
-    public function onConnect( $server, $fd, $from_id )
+    /**
+     * 启动
+     */
+    public function run()
     {
-
+        $this->server->start();
     }
 
+    /**
+     * 注册回调事件的启动
+     *
+     * @param $server
+     */
+    public function onStart( \swoole_server $server )
+    {
+    }
+
+    /**
+     * @param $server
+     * @param $fd
+     * @param $from_id
+     */
+    public function onConnect(\swoole_server $server, $fd, $from_id )
+    {
+    }
+
+    /**
+     * @param \swoole_server $server
+     * @param $fd
+     * @param $from_id
+     * @param $data
+     */
     public function onReceive( \swoole_server $server, $fd, $from_id, $data )
     {
 
     }
 
-    public function onClose( $server, $fd, $from_id )
+    /**
+     * @param $server
+     * @param $fd
+     * @param $from_id
+     */
+    public function onClose( \swoole_server $server, $fd, $from_id )
     {
-    }
-
-    public function setProcessName($name)
-    {
-
-    }
-
-    public function run()
-    {
-        $this->server->start();
     }
 }

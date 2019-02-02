@@ -6,9 +6,17 @@
  * Time: 6:59 PM
  */
 
+define('DEBUG', true);
+
 define('APP_PATH', dirname(__DIR__));
 
-define('DEBUG', true);
+define('LIB_PATH', APP_PATH . '/Lib');
+
+define('CONF_PATH', APP_PATH . '/Conf');
+
+define('CRON_PATH', APP_PATH . '/Cron');
+
+define('SRC_PATH', APP_PATH . '/Src');
 
 // 注册顶层命名空间到自动载入器
 require_once(LIB_PATH . '/Loader.php');
@@ -18,6 +26,7 @@ spl_autoload_register('\\Lib\\Loader::autoload');
 $conf = json_decode($argv[1], true);
 // init tcp server
 $server = new \Lib\TcpServer($conf);
-$server->setProcessName($conf['server']['process_name']);
-
+// process 名称设置 mac下安全设置
+//$server->setProcessName($conf['server']['process_name']);
+// 启动server
 $server->run();
