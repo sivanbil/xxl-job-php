@@ -10,12 +10,17 @@
 > 多机部署
 
 # 结构
+
+- Bin 命令启动server
+
 - Conf 服务器配置
 
 - Cron 定时任务
 
-- Lib  核心内裤
+- Lib  核心类库
+
+- Log  运行时日志
 
 - Src  业务逻辑代码
+  - index.php  启动服务的中控文件
 
-- index.php  启动服务的中控文件
