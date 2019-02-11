@@ -1,6 +1,15 @@
 <?php
 /**
- * Created by PhpStorm.
+ * client 发送的格式
+ * $params = '{
+"createMillisTime":' . $time . ',
+"accessToken":"",
+"className":"com.xxl.job.core.biz.ExecutorBiz",
+"methodName":"registry",
+"parameterTypes":["com.xxl.job.core.biz.model.TriggerParam"],
+"parameters":[{"registGroup":"","registryKey":"add", "registryValue": ""}],
+"version":null
+}';
  * User: liaoxianwen
  * Date: 2019/2/1
  * Time: 11:08 AM
@@ -25,18 +34,32 @@ class Cmd
 
     public static function exec($cmd, $name)
     {
+        $task_center = new TaskCenter();
+
+        $task_center->post();
+        die;
+        $time = ceil(microtime(true) * 1000);
+
         // 进程检测
         if (Process::processCheckExist()) {
             if ($cmd == 'shutdown') {
-
+                $client = new \swoole_client(SWOOLE_UNIX_STREAM, SWOOLE_SOCK_SYNC);
+                $client->connect(uniSockPath, 0, 3);
+                $client->send(json_encode(['cmd' => $cmd, 'name' => $name]));
+                $ret = $client->recv();
+                $ret = json_decode($ret, true);
+                $client->close();
+                return $ret;
             }
         } else {
             if ($cmd == 'start') {
                 $server_info = self::getServerIni($name);
                 // 执行server
                 if (Process::start($server_info['conf'])) {
-                    // 执行tcp server
-                    //TcpServer::start();
+                    $task_center = new TaskCenter();
+
+                    $task_center->get();
+
                 }
             } else {
                 if ($cmd == 'shutdown' || $cmd == 'status') {

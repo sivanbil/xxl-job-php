@@ -21,6 +21,8 @@ define('SRC_PATH', APP_PATH . '/Src');
 
 define('SUPER_PROCESS_NAME', 'XXL-JOB-PHP-EXECUTOR');
 
+define('UNIX_SOCK_PATH', "/tmp/" . SUPER_PROCESS_NAME . ".sock");
+
 if (PHP_OS == 'WINNT') {
     define("NL", "\r\n");
 } else {

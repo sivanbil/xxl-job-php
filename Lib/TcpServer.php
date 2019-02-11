@@ -26,6 +26,11 @@ class TcpServer
         $this->server->on('connect', [$this, 'onConnect']);
         $this->server->on('receive', [$this, 'onReceive']);
         $this->server->on('close',   [$this, 'onClose']);
+
+        if (isset($conf['setting']['task_worker_num'])) {
+            $this->server->on('Task', array($this, 'onTask'));
+            $this->server->on('Finish', array($this, 'onFinish'));
+        }
     }
 
     /**
@@ -57,6 +62,7 @@ class TcpServer
      */
     public function onStart( \swoole_server $server )
     {
+
     }
 
     /**
@@ -86,5 +92,15 @@ class TcpServer
      */
     public function onClose( \swoole_server $server, $fd, $from_id )
     {
+
+    }
+
+    public function onTask($server, $taskId, $fromId, $data)
+    {
+
+    }
+    public function onFinish($server, $taskId, $data)
+    {
+
     }
 }
