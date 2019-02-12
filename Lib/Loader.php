@@ -13,6 +13,7 @@ class Loader
      * 命名空间的路径
      */
     static $ns_path;
+
     /**
      * 自动载入类
      * @param $class

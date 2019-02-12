@@ -23,20 +23,24 @@ class TaskCenter
     }
 
     /**
+     * 注册执行器
+     *
      * @param $time
+     * @param $app_name
+     * @param $address
      */
-    public function registy($time)
+    public function registry($time, $app_name, $address)
     {
         // 执行注册 server
-        $params = '{
-                    "createMillisTime":'. $time .',
-                    "accessToken":"",
-                    "className":"com.xxl.job.core.biz.AdminBiz",
-                    "methodName":"registry",
-                    "parameterTypes":["com.xxl.job.core.biz.model.RegistryParam"],
-                    "parameters":[{"registGroup":"EXECUTOR","registryKey":"swoole", "registryValue": "127.0.0.1:9501"}],
-                    "version":null
-                    }';
+        $params = json_encode([
+            'createMillisTime' => $time,
+            'accessToken' => '',
+            'className' => 'com.xxl.job.core.biz.AdminBiz',
+            'methodName' => 'registry',
+            'parameterTypes' => ['com.xxl.job.core.biz.model.RegistryParam'],
+            'parameters' => [['registGroup' => 'EXECUTOR', 'registryKey' => $app_name, 'registryValue' => $address]]
+        ]);
+
         $message = JobTool::packSendData($params);
         $this->client->send($message);
         $data = $this->client->recv();
@@ -47,6 +51,37 @@ class TaskCenter
         } else {
             // 注册失败
             echo '注册失败';
+        }
+    }
+
+    /**
+     * 摘除执行器
+     *
+     * @param $time
+     * @param $app_name
+     * @param $address
+     */
+    public function registryRemove($time, $app_name, $address)
+    {
+        // 摘除执行器
+        $params = json_encode([
+            'createMillisTime' => $time,
+            'accessToken' => '',
+            'className' => 'com.xxl.job.core.biz.AdminBiz',
+            'methodName' => 'registryRemove',
+            'parameterTypes' => ['com.xxl.job.core.biz.model.RegistryParam'],
+            'parameters' => [['registGroup' => 'EXECUTOR', 'registryKey' => $app_name, 'registryValue' => $address]]
+        ]);
+        $message = JobTool::packSendData($params);
+        $this->client->send($message);
+        $data = $this->client->recv();
+        $result = JobTool::unpackData($data);
+        if ($result['result']['code'] === 200) {
+            // 注册成功
+            echo '摘除成功';
+        } else {
+            // 注册失败
+            echo '摘除失败';
         }
     }
 }

@@ -118,10 +118,6 @@ trait JobTool
         error_log($msg . PHP_EOL, 3, '/tmp/SuperMaster.log');
     }
 
-    public static function startServer($phpStart, $cmd, $name)
-    {
-
-    }
 
     /**
      * @param $msg

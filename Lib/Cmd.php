@@ -38,7 +38,7 @@ class Cmd
         if (Process::processCheckExist()) {
             if ($cmd == 'shutdown') {
                 $client = new \swoole_client(SWOOLE_UNIX_STREAM, SWOOLE_SOCK_SYNC);
-                $client->connect(uniSockPath, 0, 3);
+                $client->connect(UNIX_SOCK_PATH, 0, 3);
                 $client->send(json_encode(['cmd' => $cmd, 'name' => $name]));
                 $ret = $client->recv();
                 $ret = json_decode($ret, true);
@@ -53,7 +53,7 @@ class Cmd
                 if (Process::start($server_info['conf'])) {
                     $task_center = new TaskCenter();
                     $time = ceil(microtime(true) * 1000);
-                    $task_center->registy($time);
+                    $task_center->registry($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
                 }
             } else {
                 if ($cmd == 'shutdown' || $cmd == 'status') {
@@ -76,7 +76,7 @@ class Cmd
     {
         return [
             'start', 'stop', 'reload', 'restart',
-            'shutdown', 'status', 'list'
+            'shutdown', 'status', 'list', 'registry'
         ];
     }
 
