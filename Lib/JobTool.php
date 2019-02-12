@@ -131,6 +131,35 @@ trait JobTool
         error_log($msg . PHP_EOL, 3, '/tmp/SuperMasterTimer.log');
     }
 
+
+    /**
+     * 设置发送的data
+     *
+     * @param $send_data
+     * @return string
+     */
+    public static function packSendData($send_data)
+    {
+        $bytes = self::convertStrToBytes($send_data);
+        $length_bytes = self::intToByteArray(sizeof($bytes));
+        $total_data =  array_merge($length_bytes, $bytes);
+
+        return self::convertByteArrToStr($total_data);
+    }
+
+    /**
+     * @param $data
+     * @return mixed
+     */
+    public static function unpackData($data)
+    {
+        $bytes = self::convertStrToBytes($data);
+        $data = self::convertByteArrToStr(array_slice($bytes, 4));
+
+        $req = json_decode($data, true);
+        return $req;
+    }
+
     /**
      * 最后输出返回的数据组合
      *

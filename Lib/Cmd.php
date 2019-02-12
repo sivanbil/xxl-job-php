@@ -34,12 +34,6 @@ class Cmd
 
     public static function exec($cmd, $name)
     {
-        $task_center = new TaskCenter();
-
-        $task_center->post();
-        die;
-        $time = ceil(microtime(true) * 1000);
-
         // 进程检测
         if (Process::processCheckExist()) {
             if ($cmd == 'shutdown') {
@@ -51,15 +45,15 @@ class Cmd
                 $client->close();
                 return $ret;
             }
+
         } else {
             if ($cmd == 'start') {
                 $server_info = self::getServerIni($name);
                 // 执行server
                 if (Process::start($server_info['conf'])) {
                     $task_center = new TaskCenter();
-
-                    $task_center->get();
-
+                    $time = ceil(microtime(true) * 1000);
+                    $task_center->registy($time);
                 }
             } else {
                 if ($cmd == 'shutdown' || $cmd == 'status') {

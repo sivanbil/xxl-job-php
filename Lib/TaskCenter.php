@@ -1,7 +1,7 @@
 <?php
 /**
  * 任务调度中心配置细腻
- * User: liaoxianwen
+ * User: sivan
  * Date: 2019/2/3
  * Time: 10:25 AM
  */
@@ -11,44 +11,42 @@ namespace Lib;
 
 class TaskCenter
 {
-    public $url = '127.0.0.1';
-    public $port = '8187';
-    public $api_mapping = '/xxl-job-admin/api';
-    public $enable_ssl = false;
+    public $host = '127.0.0.1';
+    public $port = '8987';
 
     public $client = NULL;
 
     public function __construct()
     {
-        $this->client = new \swoole_http_client($this->url, $this->port, $this->enable_ssl);
-        
+        $this->client = new \swoole_client(SWOOLE_SOCK_TCP);
+        $this->client->connect($this->host, $this->port, -1);
     }
 
-    public function get()
+    /**
+     * @param $time
+     */
+    public function registy($time)
     {
-        $this->client->get($this->api_mapping, function () {
-            echo "Length: " . strlen($this->client->body) . "\n";
-            echo $this->client->body;
-        });
-
-    }
-
-    public function post()
-    {
-
         // 执行注册 server
-//        $params = '{
-//                    "createMillisTime":' . time() . ',
-//                    "accessToken":"",
-//                    "className":"com.xxl.job.core.biz.ExecutorBiz",
-//                    "methodName":"registry",
-//                    "parameterTypes":["com.xxl.job.core.biz.model.TriggerParam"],
-//                    "parameters":[{"registGroup":3,"registryKey":"add", "registryValue": ""}],
-//                    "version":null
-//                    }';
-        $this->client->post($this->api_mapping, array("a" => '1234', 'b' => '456'), function () {
-            echo "Length: " . strlen($this->client->body) . "\n";
-            echo $this->client->body;
-        });
+        $params = '{
+                    "createMillisTime":'. $time .',
+                    "accessToken":"",
+                    "className":"com.xxl.job.core.biz.AdminBiz",
+                    "methodName":"registry",
+                    "parameterTypes":["com.xxl.job.core.biz.model.RegistryParam"],
+                    "parameters":[{"registGroup":"EXECUTOR","registryKey":"swoole", "registryValue": "127.0.0.1:9501"}],
+                    "version":null
+                    }';
+        $message = JobTool::packSendData($params);
+        $this->client->send($message);
+        $data = $this->client->recv();
+        $result = JobTool::unpackData($data);
+        if ($result['result']['code'] === 200) {
+            // 注册成功
+            echo '注册成功';
+        } else {
+            // 注册失败
+            echo '注册失败';
+        }
     }
 }

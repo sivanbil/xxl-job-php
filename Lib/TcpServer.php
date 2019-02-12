@@ -60,7 +60,7 @@ class TcpServer
      *
      * @param $server
      */
-    public function onStart( \swoole_server $server )
+    public function onStart(\swoole_server $server )
     {
 
     }
@@ -82,7 +82,11 @@ class TcpServer
      */
     public function onReceive( \swoole_server $server, $fd, $from_id, $data )
     {
+        $req = JobTool::unpackData($data);
+        var_dump($req);
+        $message = JobTool::packSendData(json_encode(['result' => ['code' => 200, "content" => 'success'], 'requestId' => $req['requestId'], 'errorMsg' => null]));
 
+        $server->send($fd, $message);
     }
 
     /**
@@ -92,7 +96,7 @@ class TcpServer
      */
     public function onClose( \swoole_server $server, $fd, $from_id )
     {
-
+        var_dump('close');
     }
 
     public function onTask($server, $taskId, $fromId, $data)
