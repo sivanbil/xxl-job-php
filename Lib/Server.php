@@ -5,8 +5,9 @@
  * Date: 2019/2/1
  * Time: 7:10 PM
  */
-namespace Src;
+namespace Lib;
 
+use Lib\Code;
 use Lib\JobTool;
 use Lib\TcpServer;
 
@@ -15,10 +16,15 @@ class Server extends TcpServer
 
     use JobTool;
 
+    public function __construct($conf)
+    {
+        parent::__construct($conf);
+    }
+
     // 心跳检测
     public function beat()
     {
-
+        return Code::SUCCESS_CODE;
     }
 
     // 忙碌检测
