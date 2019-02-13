@@ -102,24 +102,25 @@ class TcpServer
 
         $invoke_name = $req['methodName'];
 
+        // 根据调用不同方法
         switch ($invoke_name) {
             case 'run':
                 // 任务处理
-
+                ExecutorCenter::run($req['parameters']);
                 // 调度结果
                 $result = ['code' => Code::SUCCESS_CODE];
                 break;
             case 'idleBeat':
-
+                $result = ExecutorCenter::idleBeat($req['parameters']);
                 break;
             case 'kill':
-
+                $result = ExecutorCenter::kill($req['job_id']);
                 break;
             case 'log':
-
+                $result = ExecutorCenter::log($req['logDateTim'], $req['job_id'], $req['from_line_num']);
                 break;
             case 'beat':
-
+                $result = ExecutorCenter::beat();
                 break;
             default:
                 $result = ['code' => Code::ERROR_CODE];

@@ -7,7 +7,7 @@
  */
 namespace Lib;
 
-class ExecutorServer
+class ExecutorCenter
 {
 
     use JobTool;
