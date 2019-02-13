@@ -13,7 +13,7 @@ class TcpServer
 {
     use JobTool;
     /**
-     * @var \swoole_server
+     * @var Server
      */
     public $server;
 
@@ -27,7 +27,7 @@ class TcpServer
 
         $this->conf = $conf;
 
-        $this->server = new \swoole_server($conf['server']['ip'], $conf['server']['port']);
+        $this->server = new Server($conf['server']['ip'], $conf['server']['port']);
         $this->server->set($conf['setting']);
 
         // 注册回调事件
@@ -75,7 +75,7 @@ class TcpServer
      *
      * @param $server
      */
-    public function onStart(\swoole_server $server )
+    public function onStart(Server $server )
     {
 
     }
@@ -85,26 +85,47 @@ class TcpServer
      * @param $fd
      * @param $from_id
      */
-    public function onConnect(\swoole_server $server, $fd, $from_id )
+    public function onConnect(Server $server, $fd, $from_id )
     {
     }
 
     /**
-     * @param \swoole_server $server
+     * @param  $server
      * @param $fd
      * @param $from_id
      * @param $data
      */
-    public function onReceive( \swoole_server $server, $fd, $from_id, $data )
+    public function onReceive( Server $server, $fd, $from_id, $data )
     {
+        // 解包通信数据
         $req = JobTool::unpackData($data);
 
-        $message = JobTool::packSendData(json_encode(['result' => ['code' => 200, "content" => 'success'], 'requestId' => $req['requestId'], 'errorMsg' => null]));
+        $invoke_name = $req['methodName'];
 
-        // 任务处理
+        switch ($invoke_name) {
+            case 'run':
+                // 任务处理
 
+                // 调度结果
+                $message = ['result' => ['code' => 200, "content" => 'success'], 'requestId' => $req['requestId'], 'errorMsg' => null];
+                break;
+            case 'idleBeat':
 
-        $server->send($fd, $message);
+                break;
+            case 'kill':
+
+                break;
+            case 'log':
+
+                break;
+            case 'beat':
+
+                break;
+            default:
+                $message = [];
+        }
+        // 打包通信数据
+        $server->send($fd, JobTool::packSendData(json_encode($message)));
     }
 
     /**
@@ -112,7 +133,7 @@ class TcpServer
      * @param $fd
      * @param $from_id
      */
-    public function onClose( \swoole_server $server, $fd, $from_id )
+    public function onClose( Server $server, $fd, $from_id )
     {
 
     }
