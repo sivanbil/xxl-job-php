@@ -12,15 +12,13 @@ namespace Lib;
 
 class BizCenter
 {
-    public $host = '127.0.0.1';
-    public $port = '8987';
-
     public $client = NULL;
 
-    public function __construct()
+    public function __construct($host = '127.0.0.1', $port = '8987')
     {
+
         $this->client = new \swoole_client(SWOOLE_SOCK_TCP);
-        $this->client->connect($this->host, $this->port, -1);
+        $this->client->connect($host, $port, -1);
     }
 
     /**
@@ -41,17 +39,16 @@ class BizCenter
             'parameterTypes' => ['com.xxl.job.core.biz.model.RegistryParam'],
             'parameters' => [['registGroup' => 'EXECUTOR', 'registryKey' => $app_name, 'registryValue' => $address]]
         ]);
-
         $message = JobTool::packSendData($params);
         $this->client->send($message);
         $data = $this->client->recv();
         $result = JobTool::unpackData($data);
         if ($result['result']['code'] === 200) {
             // 注册成功
-            echo '注册成功';
+            echo $params . PHP_EOL . '注册成功' . PHP_EOL;
         } else {
             // 注册失败
-            echo '注册失败';
+            echo $params . PHP_EOL . '注册失败' . PHP_EOL;
         }
     }
 
@@ -78,11 +75,10 @@ class BizCenter
         $data = $this->client->recv();
         $result = JobTool::unpackData($data);
         if ($result['result']['code'] === 200) {
-            // 注册成功
-            echo '摘除成功';
+            echo $params . PHP_EOL . '摘除成功' . PHP_EOL;
         } else {
-            // 注册失败
-            echo '摘除失败';
+            // 摘除失败
+            echo $params . PHP_EOL . '摘除失败' . PHP_EOL;
         }
     }
 

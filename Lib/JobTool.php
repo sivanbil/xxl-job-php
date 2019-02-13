@@ -215,4 +215,21 @@ trait JobTool
 
         return '';
     }
+
+    /**
+     * @param $cmd
+     * @param $name
+     * @return mixed|string
+     */
+    public static function sendCmdToSock($cmd, $name)
+    {
+        $client = new \swoole_client(SWOOLE_UNIX_STREAM, SWOOLE_SOCK_SYNC);
+        $client->connect(UNIX_SOCK_PATH, 0, 3);
+        $client->send(json_encode(['cmd' => $cmd, 'name' => $name]));
+        $ret = $client->recv();
+        $ret = json_decode($ret, true);
+        $client->close();
+
+        return $ret;
+    }
 }

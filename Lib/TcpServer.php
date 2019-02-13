@@ -65,12 +65,6 @@ class TcpServer
     public function start()
     {
         $this->server->start();
-        // 定时器去注册
-        $this->server->tick(20000, function() {
-            $biz_center = new BizCenter();
-            $time = ceil(microtime(true) * 1000);
-            $biz_center->registry($time, $this->conf['server']['app_name'], $this->conf['server']['ip'] . ':' . $this->conf['server']['port']);
-        });
     }
 
     /**
@@ -80,6 +74,12 @@ class TcpServer
      */
     public function onStart(Server $server )
     {
+        // 定时器去注册
+        $server->tick($this->conf['xxljob']['registry_interval_ms'], function() {
+            $biz_center = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
+            $time = ceil(microtime(true) * 1000);
+            $biz_center->registry($time, $this->conf['server']['app_name'], $this->conf['server']['ip'] . ':' . $this->conf['server']['port']);
+        });
         error_log('Start server success.' . PHP_EOL, 3, '/tmp/SuperMaster.log');
     }
 

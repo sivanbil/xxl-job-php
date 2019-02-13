@@ -11,7 +11,6 @@ namespace Lib;
 class Cmd
 {
     use JobTool;
-
     /**
      * 需要支持以下几种命令
      * start    启动
@@ -26,37 +25,17 @@ class Cmd
 
     public static function exec($cmd, $name)
     {
+
         // 进程检测
         if (CmdProcess::processCheckExist()) {
-            if ($cmd == 'shutdown') {
-                $client = new \swoole_client(SWOOLE_UNIX_STREAM, SWOOLE_SOCK_SYNC);
-                $client->connect(UNIX_SOCK_PATH, 0, 3);
-                $client->send(json_encode(['cmd' => $cmd, 'name' => $name]));
-                $ret = $client->recv();
-                $ret = json_decode($ret, true);
-                $client->close();
 
-                //先杀掉所有的run server
-                foreach ($ret['data'] as $server) {
-                    // array('php'=>,'name'=)
-                    $ret = system("ps aux | grep " . $server['name'] . " | grep master | grep -v grep ");
-                    preg_match('/\d+/', $ret, $match);//匹配出来进程号
-                    $ServerId = $match['0'];
-                    if (posix_kill($ServerId, 15)) {//如果成功了
-                        echo 'stop ' . $server['name'] . "\033[32;40m [SUCCESS] \033[0m" . PHP_EOL;
-                    } else {
-                        echo 'stop ' . $server['name'] . "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
-                    }
-                };
-                //然后开始杀Swoole-Controller
-                $ret = system("  ps aux | grep " . SUPER_PROCESS_NAME . " | grep -v grep");
-                preg_match('/\d+/', $ret, $match);
-                $ServerId = $match['0'];
-                if (posix_kill($ServerId, 15)) {//如果成功了
-                    echo 'stop ' . SUPER_PROCESS_NAME . "\033[32;40m [SUCCESS] \033[0m" . PHP_EOL;
-                } else {
-                    echo 'stop ' . SUPER_PROCESS_NAME . "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
-                }
+            switch ($cmd) {
+                case 'shutdown':
+                    $return = self::sendCmdToSock($cmd, $name);
+                    break;
+                case 'stop':
+
+                    break;
             }
 
         } else {
@@ -64,7 +43,7 @@ class Cmd
                 $server_info = self::getServerIni($name);
                 // 执行server
                 if (CmdProcess::start($server_info['conf'])) {
-                    $biz_center = new BizCenter();
+                    $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
                     $time = ceil(microtime(true) * 1000);
                     // 第一次注册
                     $biz_center->registry($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
@@ -90,7 +69,7 @@ class Cmd
     {
         return [
             'start', 'stop', 'reload', 'restart',
-            'shutdown', 'status', 'list', 'registry'
+            'shutdown', 'status', 'list'
         ];
     }
 
