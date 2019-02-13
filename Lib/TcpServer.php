@@ -13,10 +13,13 @@ class TcpServer
 {
     use JobTool;
     /**
-     * @var Server
+     * @var
      */
     public $server;
 
+    /**
+     * @var
+     */
     public $conf;
 
     /**
