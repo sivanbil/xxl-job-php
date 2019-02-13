@@ -1,5 +1,6 @@
 <?php
 /**
+ *
  * @author sivan
  * @description 进程管理
  */
@@ -17,6 +18,7 @@ class Process
     {
         // 创建并启动进程
         $process = new \swoole_process(function (\swoole_process $worker) use ($conf_info) {
+            // 启动进程守护
             $worker->exec($conf_info['server']['php'], [SRC_PATH . "/index.php", json_encode($conf_info)]);
         }, false);
         self::$mpid = $process->start();

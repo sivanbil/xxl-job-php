@@ -1,5 +1,9 @@
 <?php
 /**
+ * 常驻进程的tcp 执行器server
+ *
+ * 执行器提供给调度中心的api
+ *
  * @author sivan
  * @description tcp server class
  */

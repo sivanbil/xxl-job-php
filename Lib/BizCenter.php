@@ -1,6 +1,7 @@
 <?php
 /**
- * 任务调度中心配置细腻
+ * 调度中心api
+ *
  * User: sivan
  * Date: 2019/2/3
  * Time: 10:25 AM

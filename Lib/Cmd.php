@@ -1,16 +1,8 @@
 <?php
 /**
- * client 发送的格式
- * $params = '{
-"createMillisTime":' . $time . ',
-"accessToken":"",
-"className":"com.xxl.job.core.biz.ExecutorBiz",
-"methodName":"registry",
-"parameterTypes":["com.xxl.job.core.biz.model.TriggerParam"],
-"parameters":[{"registGroup":"","registryKey":"add", "registryValue": ""}],
-"version":null
-}';
- * User: liaoxianwen
+ * 命令行启动守护进程
+ *
+ * User: sivan
  * Date: 2019/2/1
  * Time: 11:08 AM
  */

@@ -1,6 +1,6 @@
 <?php
 /**
- * 自动加载
+ * 注册自动加载
  * User: sivan
  * Date: 2019/2/1
  * Time: 5:02 PM

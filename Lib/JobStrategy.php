@@ -1,5 +1,7 @@
 <?php
 /**
+ * 任务执行策略
+ *
  * @author sivan
  * @description job strategy
  */

@@ -1,7 +1,8 @@
 <?php
 /**
- * 策略串行
- * User: liaoxianwen
+ * 队列支持
+ *
+ * User: sivan
  * Date: 2019/2/1
  * Time: 3:26 PM
  */
