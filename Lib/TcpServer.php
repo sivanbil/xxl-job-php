@@ -77,7 +77,7 @@ class TcpServer
      */
     public function onStart(Server $server )
     {
-
+        error_log('Start server success.' . PHP_EOL, 3, '/tmp/SuperMaster.log');
     }
 
     /**
@@ -107,7 +107,7 @@ class TcpServer
                 // 任务处理
 
                 // 调度结果
-                $message = ['result' => ['code' => 200, "content" => 'success'], 'requestId' => $req['requestId'], 'errorMsg' => null];
+                $result = ['code' => Code::SUCCESS_CODE];
                 break;
             case 'idleBeat':
 
@@ -122,9 +122,12 @@ class TcpServer
 
                 break;
             default:
-                $message = [];
+                $result = ['code' => Code::ERROR_CODE];
         }
         // 打包通信数据
+        $message = ['result' => $result, 'requestId' => $req['requestId'], 'errorMsg' => null];
+
+        // 发送数据包
         $server->send($fd, JobTool::packSendData(json_encode($message)));
     }
 

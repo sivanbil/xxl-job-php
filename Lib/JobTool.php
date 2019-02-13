@@ -191,4 +191,26 @@ trait JobTool
 
         return json_decode($stream_data, true);
     }
+
+    /**
+     * jobid log_time拼日志文件名称
+     *
+     * @param $log_time
+     * @param $job_id
+     */
+    public static function makeLogFileName($log_time, $job_id)
+    {
+
+    }
+
+    /**
+     * 读取日志文件
+     *
+     * @param $log_file_name
+     * @param $from_line_num
+     */
+    public static function readLog($log_file_name, $from_line_num)
+    {
+
+    }
 }

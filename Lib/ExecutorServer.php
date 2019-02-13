@@ -21,19 +21,32 @@ class ExecutorServer extends TcpServer
     // 心跳检测
     public function beat()
     {
-        return Code::SUCCESS_CODE;
+        return ['code' => Code::SUCCESS_CODE];
     }
 
     // 忙碌检测
     public function idleBeat($job_id)
     {
+        $is_running_or_has_queue = false;
 
+        $job_status = [];
+
+        if ($job_status) {
+            $is_running_or_has_queue = true;
+        }
+
+        if ($is_running_or_has_queue) {
+            return ['code' => Code::ERROR_CODE, 'msg' => 'job thread is running or has trigger queue.'];
+        }
+
+        return ['code' => Code::SUCCESS_CODE];
     }
 
     // 获取执行日志
     public function log($job_id)
     {
 
+        return [];
     }
 
     // 终止任务
