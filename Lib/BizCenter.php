@@ -9,7 +9,7 @@
 namespace Lib;
 
 
-class TaskCenter
+class BizCenter
 {
     public $host = '127.0.0.1';
     public $port = '8987';
@@ -82,6 +82,44 @@ class TaskCenter
         } else {
             // 注册失败
             echo '摘除失败';
+        }
+    }
+
+    /**
+     * 任务执行回调
+     *
+     * @param $time
+     * @param $job_id
+     * @param $logDateTim
+     * @param $execute_result
+     */
+    public function callback($time, $job_id, $logDateTim, $execute_result)
+    {
+        $params = json_encode([
+            'createMillisTime' => $time,
+            'accessToken' => '',
+            'className' => 'com.xxl.job.core.biz.AdminBiz',
+            'methodName' => 'callback',
+            'parameterTypes' => ['com.xxl.job.core.biz.model.HandleCallbackParam'],
+            'parameters' => [
+                [
+                    'logId' => $job_id,
+                    'logDateTim' => $logDateTim,
+                    'executeResult' => $execute_result
+                ]
+            ]
+        ]);
+
+        $message = JobTool::packSendData($params);
+        $this->client->send($message);
+        $data = $this->client->recv();
+        $result = JobTool::unpackData($data);
+        if ($result['result']['code'] === 200) {
+            // 注册成功
+            echo '回调成功';
+        } else {
+            // 注册失败
+            echo '回调失败';
         }
     }
 }

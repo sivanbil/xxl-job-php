@@ -43,7 +43,28 @@ class Cmd
                 $ret = $client->recv();
                 $ret = json_decode($ret, true);
                 $client->close();
-                return $ret;
+
+                //先杀掉所有的run server
+                foreach ($ret['data'] as $server) {
+                    // array('php'=>,'name'=)
+                    $ret = system("ps aux | grep " . $server['name'] . " | grep master | grep -v grep ");
+                    preg_match('/\d+/', $ret, $match);//匹配出来进程号
+                    $ServerId = $match['0'];
+                    if (posix_kill($ServerId, 15)) {//如果成功了
+                        echo 'stop ' . $server['name'] . "\033[32;40m [SUCCESS] \033[0m" . PHP_EOL;
+                    } else {
+                        echo 'stop ' . $server['name'] . "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
+                    }
+                };
+                //然后开始杀Swoole-Controller
+                $ret = system("  ps aux | grep " . SUPER_PROCESS_NAME . " | grep -v grep");
+                preg_match('/\d+/', $ret, $match);
+                $ServerId = $match['0'];
+                if (posix_kill($ServerId, 15)) {//如果成功了
+                    echo 'stop ' . SUPER_PROCESS_NAME . "\033[32;40m [SUCCESS] \033[0m" . PHP_EOL;
+                } else {
+                    echo 'stop ' . SUPER_PROCESS_NAME . "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
+                }
             }
 
         } else {
@@ -51,9 +72,10 @@ class Cmd
                 $server_info = self::getServerIni($name);
                 // 执行server
                 if (Process::start($server_info['conf'])) {
-                    $task_center = new TaskCenter();
+                    $biz_center = new BizCenter();
                     $time = ceil(microtime(true) * 1000);
-                    $task_center->registry($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
+                    // 第一次注册
+                    $biz_center->registry($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
                 }
             } else {
                 if ($cmd == 'shutdown' || $cmd == 'status') {

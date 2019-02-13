@@ -13,11 +13,16 @@ class TcpServer
      */
     public $server;
 
+    public $conf;
+
     /**
      * TcpServer constructor.
      * @param $conf
      */
     public function __construct($conf) {
+
+        $this->conf = $conf;
+
         $this->server = new \swoole_server($conf['server']['ip'], $conf['server']['port']);
         $this->server->set($conf['setting']);
 
@@ -53,6 +58,12 @@ class TcpServer
     public function run()
     {
         $this->server->start();
+        // 定时器去注册
+        $this->server->tick(20000, function() {
+            $biz_center = new BizCenter();
+            $time = ceil(microtime(true) * 1000);
+            $biz_center->registry($time, $this->conf['server']['app_name'], $this->conf['server']['ip'] . ':' . $this->conf['server']['port']);
+        });
     }
 
     /**
@@ -86,6 +97,9 @@ class TcpServer
 
         $message = JobTool::packSendData(json_encode(['result' => ['code' => 200, "content" => 'success'], 'requestId' => $req['requestId'], 'errorMsg' => null]));
 
+        // 任务处理
+
+
         $server->send($fd, $message);
     }
 
@@ -96,7 +110,7 @@ class TcpServer
      */
     public function onClose( \swoole_server $server, $fd, $from_id )
     {
-        var_dump('close');
+
     }
 
     public function onTask($server, $taskId, $fromId, $data)
