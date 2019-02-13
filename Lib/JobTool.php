@@ -201,6 +201,7 @@ trait JobTool
     public static function makeLogFileName($log_time, $job_id)
     {
 
+        return '';
     }
 
     /**
@@ -212,5 +213,6 @@ trait JobTool
     public static function readLog($log_file_name, $from_line_num)
     {
 
+        return '';
     }
 }

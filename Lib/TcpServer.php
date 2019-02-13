@@ -59,7 +59,7 @@ class TcpServer
     /**
      * 启动
      */
-    public function run()
+    public function start()
     {
         $this->server->start();
         // 定时器去注册

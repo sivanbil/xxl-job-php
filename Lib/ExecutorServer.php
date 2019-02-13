@@ -7,29 +7,33 @@
  */
 namespace Lib;
 
-class ExecutorServer extends TcpServer
+class ExecutorServer
 {
 
     use JobTool;
 
-    public function __construct($conf)
-    {
-        parent::__construct($conf);
-    }
 
-
-    // 心跳检测
-    public function beat()
+    /**
+     * 心跳检测
+     *
+     * @return array
+     */
+    public static function beat()
     {
         return ['code' => Code::SUCCESS_CODE];
     }
 
-    // 忙碌检测
-    public function idleBeat($job_id)
+    /**
+     * 忙碌检测
+     *
+     * @param $job_id
+     * @return array
+     */
+    public static function idleBeat($job_id)
     {
         $is_running_or_has_queue = false;
 
-        $job_status = [];
+        $job_status = JobExcutor::loadJob($job_id);
 
         if ($job_status) {
             $is_running_or_has_queue = true;
@@ -42,21 +46,41 @@ class ExecutorServer extends TcpServer
         return ['code' => Code::SUCCESS_CODE];
     }
 
-    // 获取执行日志
-    public function log($job_id)
+    /**
+     * 获取执行日志
+     *
+     * @param $log_time
+     * @param $job_id
+     * @param $from_line_num
+     * @return string
+     */
+    public static function log($log_time, $job_id, $from_line_num)
     {
 
-        return [];
+        $log_file_name = JobTool::makeLogFileName($log_time, $job_id);
+
+        return JobTool::readLog($log_file_name, $from_line_num);
     }
 
-    // 终止任务
-    public function kill($job_id)
-    {
 
+    /**
+     * 终止任务
+     *
+     * @param $job_id
+     * @return array
+     */
+    public static function kill($job_id)
+    {
+        $job_status = JobExcutor::loadJob($job_id);
+
+        if ($job_status) {
+            JobExcutor::removeJob($job_id);
+        }
+        return ['code' => Code::SUCCESS_CODE];
     }
 
     // 触发任务运行
-    public function trigger($params)
+    public static function run($params)
     {
 
     }

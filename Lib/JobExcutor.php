@@ -11,9 +11,14 @@ namespace Lib;
 
 class JobExcutor
 {
-    public function loadJob($job_id)
+    public static function loadJob($job_id)
+    {
+        return true;
+    }
+
+
+    public static function removeJob($job_id)
     {
 
     }
-
 }
