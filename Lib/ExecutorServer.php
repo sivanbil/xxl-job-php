@@ -7,7 +7,7 @@
  */
 namespace Lib;
 
-class Server extends TcpServer
+class ExecutorServer extends TcpServer
 {
 
     use JobTool;

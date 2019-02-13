@@ -24,8 +24,8 @@ require_once(LIB_PATH . '/Loader.php');
 spl_autoload_register('\\Lib\\Loader::autoload');
 
 $conf = json_decode($argv[1], true);
-// init tcp server
-$server = new \Lib\Server($conf);
+// init executor server
+$server = new \Lib\ExecutorServer($conf);
 // process 名称设置 mac下安全设置
 //$server->setProcessName($conf['server']['process_name']);
 // 启动server

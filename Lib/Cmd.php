@@ -27,7 +27,7 @@ class Cmd
     public static function exec($cmd, $name)
     {
         // 进程检测
-        if (Process::processCheckExist()) {
+        if (CmdProcess::processCheckExist()) {
             if ($cmd == 'shutdown') {
                 $client = new \swoole_client(SWOOLE_UNIX_STREAM, SWOOLE_SOCK_SYNC);
                 $client->connect(UNIX_SOCK_PATH, 0, 3);
@@ -63,7 +63,7 @@ class Cmd
             if ($cmd == 'start') {
                 $server_info = self::getServerIni($name);
                 // 执行server
-                if (Process::start($server_info['conf'])) {
+                if (CmdProcess::start($server_info['conf'])) {
                     $biz_center = new BizCenter();
                     $time = ceil(microtime(true) * 1000);
                     // 第一次注册

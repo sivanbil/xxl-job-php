@@ -8,6 +8,23 @@
  */
 namespace Lib;
 
-class Queue extends \Swoole\Server
+class Queue
 {
+    // 超时设置
+    public $timeout = 30;
+
+    // 阻塞模式
+    public $blocking = true;
+
+    public $queue = NULL;
+
+    public $pid;
+
+    public function __construct()
+    {
+        $this->queue = new \swoole_process(function(\swoole_process $worker) {
+            $worker->exec('/usr/local/bin/php', array(__DIR__.'/swoole_server.php'));
+        }, true);
+    }
+
 }
