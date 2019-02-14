@@ -15,5 +15,20 @@ class JobStrategy
     const DISCARD_NEXT_SCHEDULING = 2;
     // 关闭当前任务调度进程，启用新的调度
     const USE_NEXT_SCHEDULING = 3;
+
+    public static function serial()
+    {
+
+    }
+
+    public static function discard()
+    {
+
+    }
+
+    public static function next()
+    {
+
+    }
 }
 
