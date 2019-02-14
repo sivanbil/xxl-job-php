@@ -121,7 +121,7 @@ class TcpServer
                 $result = ['code' => Code::SUCCESS_CODE];
                 break;
             case 'idleBeat':
-                $result = ExecutorCenter::idleBeat($req['parameters']);
+                $result = ExecutorCenter::idleBeat($req['parameters'], $this->table);
                 break;
             case 'kill':
                 $result = ExecutorCenter::kill($req['job_id'], $this->table);

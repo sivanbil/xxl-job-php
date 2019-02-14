@@ -24,16 +24,16 @@ class ExecutorCenter
     }
 
     /**
-     * 忙碌检测
+     * 闲时检测
      *
      * @param $job_id
      * @return array
      */
-    public static function idleBeat($job_id)
+    public static function idleBeat($job_id, Table $table)
     {
         $is_running_or_has_queue = false;
 
-        $job_status = JobExcutor::loadJob($job_id);
+        $job_status = JobExcutor::loadJob($job_id, $table);
 
         if ($job_status) {
             $is_running_or_has_queue = true;
