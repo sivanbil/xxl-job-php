@@ -79,9 +79,18 @@ class ExecutorCenter
         return ['code' => Code::SUCCESS_CODE];
     }
 
-    // 触发任务运行
-    public static function run($params)
+    /**
+     * 触发任务运行
+     *
+     * @param $params
+     * @param Server $server
+     */
+    public static function run($params, Server $server)
     {
+        foreach ($params as $param) {
+            // 投递异步任务
+            $server->task($params);
+        }
 
     }
 }

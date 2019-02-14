@@ -69,15 +69,6 @@ trait JobTool
     }
 
     /**
-     * 扫描所有的任务
-     */
-    public static function getAllJobs()
-    {
-        // @todo 扫描全部的任务执行
-    }
-
-
-    /**
      * 获取数据流并流入不同的解包器中
      *
      * @param $stream_data
@@ -231,5 +222,35 @@ trait JobTool
         $client->close();
 
         return $ret;
+    }
+
+    /**
+     * @return int
+     */
+    public static function convertSecondToMicroS()
+    {
+        return intval(ceil(microtime(true) * 1000));
+    }
+
+    /**
+     * @param $ms
+     * @return int
+     */
+    public static function convertMicroSToSecond($ms)
+    {
+        return intval(ceil($ms / 1000));
+    }
+
+    /**
+     * @param $project_name
+     * @return array|mixed
+     */
+    public static function getProjectIndex($project_name)
+    {
+        $map = [
+            'platform' => $project_name .'/ecs/public/index.php',
+        ];
+        return isset($map[$project_name]) ? $map[$project_name] : [];
+
     }
 }

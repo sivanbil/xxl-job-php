@@ -44,7 +44,7 @@ class Cmd
                 // 执行server
                 if (CmdProcess::start($server_info['conf'])) {
                     $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
-                    $time = ceil(microtime(true) * 1000);
+                    $time = self::convertSecondToMicroS();
                     // 第一次注册
                     $biz_center->registry($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
                 }

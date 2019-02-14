@@ -90,7 +90,7 @@ class BizCenter
      * @param $logDateTim
      * @param $execute_result
      */
-    public function callback($time, $job_id, $logDateTim, $execute_result)
+    public function callback($time, $log_id, $logDateTim, $execute_result)
     {
         $params = json_encode([
             'createMillisTime' => $time,
@@ -100,7 +100,7 @@ class BizCenter
             'parameterTypes' => ['com.xxl.job.core.biz.model.HandleCallbackParam'],
             'parameters' => [
                 [
-                    'logId' => $job_id,
+                    'logId' => $log_id,
                     'logDateTim' => $logDateTim,
                     'executeResult' => $execute_result
                 ]
