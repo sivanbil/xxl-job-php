@@ -22,6 +22,8 @@ class TcpServer
      */
     public $conf;
 
+    public $table;
+
     /**
      * TcpServer constructor.
      * @param $conf
@@ -43,6 +45,11 @@ class TcpServer
             $this->server->on('Task', array($this, 'onTask'));
             $this->server->on('Finish', array($this, 'onFinish'));
         }
+
+        $this->table = new Table($this->conf['table']['size']);
+        $this->table->column('task_id', Table::TYPE_INT);
+        $this->table->column('process_name', Table::TYPE_STRING, 100);
+        $this->table->create();
     }
 
     /**
@@ -117,10 +124,10 @@ class TcpServer
                 $result = ExecutorCenter::idleBeat($req['parameters']);
                 break;
             case 'kill':
-                $result = ExecutorCenter::kill($req['job_id']);
+                $result = ExecutorCenter::kill($req['job_id'], $this->table);
                 break;
             case 'log':
-                $result = ExecutorCenter::log($req['logDateTim'], $req['job_id'], $req['from_line_num']);
+                $result = ExecutorCenter::log($req['logDateTim'], $req['job_id'], $req['from_line_num'], $this->table);
                 break;
             case 'beat':
                 $result = ExecutorCenter::beat();
@@ -151,30 +158,30 @@ class TcpServer
      * @param $fromId
      * @param $data
      */
-    public function onTask(Server $server, $taskId, $fromId, $data)
+    public function onTask(Server $server, $task_id, $from_id, $data)
     {
         // 项目名_类名_方法名
         $executor_handler = $data['executorHandler'];
         $handler_info_arr = explode('_', $executor_handler);
-        // /project/platform/ecs/public/index.php  teacherQuality/crontab/syncClassAndExtraDataMonthly
-
+        // /project/platform/ecs/public/index.php  teacherQuality/crontab/syncClassAndExtraDataMonthly -m=1 -c=2
+        // 项目地址
         $project_index = self::getProjectIndex($handler_info_arr[0]);
-
-
+        // 入口文件地址
         $index_path = $this->conf['project']['root_path'] . $project_index;
-
+        // 拼成可以调用脚本的样子
         $class_path = $handler_info_arr[1] . '/' . $handler_info_arr[2] . '/' . $handler_info_arr[3];
         $params = [$index_path, $class_path];
 
         // 带执行参数
         if ($data['executorParams']) {
-            $params_key_values = explode('&',$data[executorParams]);
+            $params_key_values = explode('&',$data['executorParams']);
 
             foreach ($params_key_values as $params_key_value) {
                 $params[] = '-' . $params_key_value;
             }
         }
 
+        // 然后执行脚本
         $process = new Process(function (Process $worker) use ($params) {
             // 启动进程守护
             $worker->exec($this->conf['server']['php'], $params);
@@ -186,7 +193,10 @@ class TcpServer
             echo  "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
             exit;
         }
-        return true;
+        // 设置到swoole_table里
+        $this->table->set($data['jobId'], ['task_id' => $task_id, 'process_name' => implode(' ', $params)]);
+
+        return json_encode(['job_id' => $data['jobId']]);
     }
 
     /**
@@ -196,8 +206,10 @@ class TcpServer
      * @param $taskId
      * @param $data
      */
-    public function onFinish(Server $server, $taskId, $data)
+    public function onFinish(Server $server, $task_id, $data)
     {
+        $this->table->del($data['jobId']);
+
         $biz_center = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
         $time = self::convertSecondToMicroS();
         $log_id = $data['logId'];
@@ -208,6 +220,6 @@ class TcpServer
             'msg'  => ''
         ];
         // 结果回调
-        $biz_center->callback($time, $log_id, $log_time, $execute_result );
+        $biz_center->callback($time, $log_id, $log_time, $execute_result);
     }
 }

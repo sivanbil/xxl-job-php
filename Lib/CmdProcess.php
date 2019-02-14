@@ -23,6 +23,7 @@ class CmdProcess
         }, false);
         self::$mpid = $process->start();
 
+        // 结束的子进程回收
         $wait_res = Process::wait();
         if ($wait_res['code']) {
             echo  "\033[31;40m [FAIL] \033[0m" . PHP_EOL;

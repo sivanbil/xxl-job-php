@@ -54,7 +54,7 @@ class ExecutorCenter
      * @param $from_line_num
      * @return string
      */
-    public static function log($log_time, $job_id, $from_line_num)
+    public static function log($log_time, $job_id, $from_line_num, $table)
     {
 
         $log_file_name = JobTool::makeLogFileName($log_time, $job_id);
@@ -69,12 +69,12 @@ class ExecutorCenter
      * @param $job_id
      * @return array
      */
-    public static function kill($job_id)
+    public static function kill($job_id, Table $table)
     {
-        $job_status = JobExcutor::loadJob($job_id);
+        $job_status = JobExcutor::loadJob($job_id, $table);
 
         if ($job_status) {
-            JobExcutor::removeJob($job_id);
+            JobExcutor::removeJob($job_id, $table);
         }
         return ['code' => Code::SUCCESS_CODE];
     }
@@ -89,7 +89,7 @@ class ExecutorCenter
     {
         foreach ($params as $param) {
             // 投递异步任务
-            $server->task($params);
+            $task_id = $server->task($param);
         }
 
     }

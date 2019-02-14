@@ -113,10 +113,10 @@ class BizCenter
         $result = JobTool::unpackData($data);
         if ($result['result']['code'] === 200) {
             // 注册成功
-            echo '回调成功' . PHP_EOL;
+            return true;
         } else {
             // 注册失败
-            echo '回调失败' . PHP_EOL;
+            return false;
         }
     }
 }

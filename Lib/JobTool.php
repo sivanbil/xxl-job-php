@@ -192,7 +192,12 @@ trait JobTool
     public static function makeLogFileName($log_time, $job_id)
     {
 
-        return '';
+        $time = date('Y-m-d', self::convertMicroSToSecond($log_time));
+        if (!file_exists($time)) {
+            mkdir($time);
+        }
+        $filename = $time . DIRECTORY_SEPARATOR . $job_id . '.log';
+        return $filename;
     }
 
     /**
@@ -204,7 +209,17 @@ trait JobTool
     public static function readLog($log_file_name, $from_line_num)
     {
 
-        return '';
+        $filter = [];
+        if (file_exists($log_file_name)){
+            $file_handle = fopen($log_file_name, "r");
+            while (!feof($file_handle)) {
+                $line = fgets($file_handle);
+                $filter[] = $line;
+            }
+            fclose($file_handle);
+        }
+
+        return implode(',', array_slice($filter, $from_line_num));
     }
 
     /**

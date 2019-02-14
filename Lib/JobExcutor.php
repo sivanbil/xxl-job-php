@@ -11,14 +11,15 @@ namespace Lib;
 
 class JobExcutor
 {
-    public static function loadJob($job_id)
+    public static function loadJob($job_id, Table $table)
     {
-        return true;
+
+        return $table->get($job_id);
     }
 
 
-    public static function removeJob($job_id)
+    public static function removeJob($job_id, Table $table)
     {
-
+        return $table->get($job_id);
     }
 }
