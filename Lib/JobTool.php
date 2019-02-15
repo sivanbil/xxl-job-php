@@ -194,7 +194,8 @@ trait JobTool
     {
         $filename = self::makeLogFileName($log_time, $log_id);
         $handle = fopen($filename, "a+");
-        fwrite($handle, $content . "\n");
+        $date = date('Y-m-d H:i:s', time());
+        fwrite($handle, '【' . $date . '】' .$content . "\n");
         fclose($handle);
     }
 

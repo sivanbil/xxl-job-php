@@ -6,8 +6,6 @@
  * Date: 2019/2/13
  * Time: 4:37 PM
  */
+
+sleep(10);
 echo 'exec success';
-$i = 0;
-//while (true) {
-//
-//}

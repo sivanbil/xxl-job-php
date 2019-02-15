@@ -218,7 +218,12 @@ class TcpServer
             echo  "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
             exit;
         }
-        return json_encode(['job_id' => $data['jobId'], 'request_id' => $data['requestId'], 'log_id' => $data['logId'], 'log_date_time' => $data['logDateTim']]);
+        return json_encode([
+            'job_id' => $data['jobId'],
+            'request_id' => $data['requestId'],
+            'log_id' => $data['logId'],
+            'log_date_time' => $data['logDateTim']]
+        );
 
     }
 
@@ -247,7 +252,11 @@ class TcpServer
         // 结果回调
         $result = $biz_center->callback($time, $log_id, $request_id, $log_time, $execute_result);
 
-        self::appendLog($data['log_date_time'], $data['log_id'], 'task执行完成后回调：' . intval($result));
+        $msg = Code::SUCCESS_CODE;
+        if ($result) {
+            $msg = Code::SUCCESS_CODE;
+        }
+        self::appendLog($data['log_date_time'], $data['log_id'], 'task回调:' . $msg);
 
         self::appendLog($data['log_date_time'], $data['log_id'], '任务执行完成');
     }
