@@ -282,4 +282,42 @@ trait JobTool
         return isset($map[$project_name]) ? $map[$project_name] : '';
 
     }
+
+    /**
+     * @param $name
+     * @return string
+     */
+    public static function killScriptProcess($name)
+    {
+        $ret = system("ps aux | grep '" . $name . "' | grep -v grep ");
+        preg_match('/\d+/', $ret, $match);//匹配出来进程号
+        $server_id = $match['0'];
+        if (posix_kill($server_id, 15)) {
+            //如果成功了
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @param $name
+     * @return bool
+     */
+    public static function checkScriptProcess($name)
+    {
+        $ret = system("ps aux | grep '" . $name . "' | grep -v grep ");
+        preg_match('/\d+/', $ret, $match);
+        //匹配出来进程号
+        if (!$match) {
+            return false;
+        }
+        $server_id = $match['0'];
+        if ($server_id) {
+            //如果成功了
+            return true;
+        } else {
+            return false;
+        }
+    }
 }

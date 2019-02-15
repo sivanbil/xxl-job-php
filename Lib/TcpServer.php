@@ -139,7 +139,6 @@ class TcpServer
         }
         // 打包通信数据
         $message = ['result' => $result, 'requestId' => $req['requestId'], 'errorMsg' => null];
-        //var_dump(self::packSendData(json_encode($message)));
         // 发送数据包
         $server->send($fd, self::packSendData(json_encode($message)));
     }
@@ -188,27 +187,39 @@ class TcpServer
                 $params[] = '-' . $params_key_value;
             }
         }
+        // 设置到swoole_table里
+        $process_name = implode(' ', $params);
+
+        $exist = true;
+        if (!$this->table->get($data['jobId'])) {
+            $this->table->set($data['jobId'], ['task_id' => $task_id, 'process_name' => $process_name]);
+            $exist = false;
+        }
 
         self::appendLog($data['logDateTim'], $data['logId'], '执行task参数：' . json_encode($params));
 
+        // 如果是顺序执行，可以丢弃之后的
         // 然后执行脚本
-        $process = new Process(function (Process $worker) use ($params, $data) {
-            // 启动进程守护
-            $result = $worker->exec($this->conf['server']['php'], $params);
-            self::appendLog($data['logDateTim'], $data['logId'], '执行task后返回结果：' . $result);
-
+        $process = new Process(function (Process $worker) use ($data, $process_name) {
+            while ($msg = $worker->pop()) {
+                if ($msg === false) {
+                    break;
+                }
+                // 丢弃之后的
+                $params = json_decode($msg, true);
+                $worker->exec($this->conf['server']['php'], $params);
+            }
         }, false);
-        //$process->useQueue(1, 2);
+        $process->useQueue(1, 2);
         $process->start();
+        $process->push(json_encode($params));
         $wait_res = Process::wait();
         if ($wait_res['code']) {
             echo  "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
             exit;
         }
-        // 设置到swoole_table里
-        $this->table->set($data['jobId'], ['task_id' => $task_id, 'process_name' => implode(' ', $params)]);
-
         return json_encode(['job_id' => $data['jobId'], 'request_id' => $data['requestId'], 'log_id' => $data['logId'], 'log_date_time' => $data['logDateTim']]);
+
     }
 
     /**
@@ -231,7 +242,7 @@ class TcpServer
 
         $execute_result = [
             'code' => 200,
-            'msg'  => ''
+            'msg'  => '脚本执行完成，结束脚本运行'
         ];
         // 结果回调
         $result = $biz_center->callback($time, $log_id, $request_id, $log_time, $execute_result);

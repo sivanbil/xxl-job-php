@@ -73,12 +73,18 @@ class ExecutorCenter
      */
     public static function kill($job_id, Table $table)
     {
-        $job_status = JobExcutor::loadJob($job_id, $table);
-
-        if ($job_status) {
-            JobExcutor::removeJob($job_id, $table);
+        $job_info = JobExcutor::loadJob($job_id, $table);
+        $code = Code::SUCCESS_CODE;
+        // 内存表里还有key
+        if ($job_info) {
+            $process_name = $job_info['process_name'];
+            if (self::killScriptProcess($process_name)) {
+                JobExcutor::removeJob($job_id, $table);
+            } else {
+                $code = Code::ERROR_CODE;
+            }
         }
-        return ['code' => Code::SUCCESS_CODE];
+        return ['code' => $code];
     }
 
     /**
