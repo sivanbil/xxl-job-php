@@ -107,27 +107,29 @@ class TcpServer
      */
     public function onReceive( Server $server, $fd, $from_id, $data )
     {
-        // 解包通信数据
-        $req = JobTool::unpackData($data);
 
+        // 解包通信数据
+        $req = self::unpackData($data);
+
+        $parameters = $req['parameters'];
         $invoke_name = $req['methodName'];
 
         // 根据调用不同方法
         switch ($invoke_name) {
             case 'run':
                 // 任务处理
-                ExecutorCenter::run($req['parameters'], $server);
+                ExecutorCenter::run($parameters, $req['requestId'], $server);
                 // 调度结果
                 $result = ['code' => Code::SUCCESS_CODE];
                 break;
             case 'idleBeat':
-                $result = ExecutorCenter::idleBeat($req['parameters'], $this->table);
+                $result = ExecutorCenter::idleBeat($parameters, $this->table);
                 break;
             case 'kill':
-                $result = ExecutorCenter::kill($req['job_id'], $this->table);
+                $result = ExecutorCenter::kill($parameters[0], $this->table);
                 break;
             case 'log':
-                $result = ExecutorCenter::log($req['logDateTim'], $req['job_id'], $req['from_line_num'], $this->table);
+                $result = ExecutorCenter::log($parameters[0], $parameters[1], $parameters[2], $this->table);
                 break;
             case 'beat':
                 $result = ExecutorCenter::beat();
@@ -139,7 +141,7 @@ class TcpServer
         $message = ['result' => $result, 'requestId' => $req['requestId'], 'errorMsg' => null];
 
         // 发送数据包
-        $server->send($fd, JobTool::packSendData(json_encode($message)));
+        $server->send($fd, self::packSendData(json_encode($message)));
     }
 
     /**
@@ -169,7 +171,12 @@ class TcpServer
         // 入口文件地址
         $index_path = $this->conf['project']['root_path'] . $project_index;
         // 拼成可以调用脚本的样子
-        $class_path = $handler_info_arr[1] . '/' . $handler_info_arr[2] . '/' . $handler_info_arr[3];
+        if (empty($handler_info_arr[3])) {
+            $class_path = '';
+            $index_path = '/data/wwwroot/xxl-job-swoole/Tests/test_cli.php';
+        } else {
+            $class_path = $handler_info_arr[1] . '/' . $handler_info_arr[2] . '/' . $handler_info_arr[3];
+        }
         $params = [$index_path, $class_path];
 
         // 带执行参数
@@ -181,13 +188,16 @@ class TcpServer
             }
         }
 
+        self::appendLog($data['logDateTim'], $data['logId'], '执行task参数：' . json_encode($params));
+
         // 然后执行脚本
-        $process = new Process(function (Process $worker) use ($params) {
+        $process = new Process(function (Process $worker) use ($params, $data) {
             // 启动进程守护
-            $worker->exec($this->conf['server']['php'], $params);
+            $result = $worker->exec($this->conf['server']['php'], $params);
+            self::appendLog($data['logDateTim'], $data['logId'], '执行task后返回结果：' . $result);
+
         }, false);
         $process->start();
-
         $wait_res = Process::wait();
         if ($wait_res['code']) {
             echo  "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
@@ -196,7 +206,7 @@ class TcpServer
         // 设置到swoole_table里
         $this->table->set($data['jobId'], ['task_id' => $task_id, 'process_name' => implode(' ', $params)]);
 
-        return json_encode(['job_id' => $data['jobId']]);
+        return json_encode(['job_id' => $data['jobId'], 'request_id' => $data['requestId'], 'log_id' => $data['logId'], 'log_date_time' => $data['logDateTim']]);
     }
 
     /**
@@ -208,18 +218,24 @@ class TcpServer
      */
     public function onFinish(Server $server, $task_id, $data)
     {
-        $this->table->del($data['jobId']);
+        $data = json_decode($data, true);
+        $this->table->del($data['job_id']);
 
         $biz_center = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
         $time = self::convertSecondToMicroS();
-        $log_id = $data['logId'];
-        $log_time = $data['logDateTim'];
+        $log_id = $data['log_id'];
+        $log_time = $data['log_date_time'];
+        $request_id = $data['request_id'];
 
         $execute_result = [
             'code' => 200,
             'msg'  => ''
         ];
         // 结果回调
-        $biz_center->callback($time, $log_id, $log_time, $execute_result);
+        $result = $biz_center->callback($time, $log_id, $request_id, $log_time, $execute_result);
+
+        self::appendLog($data['log_date_time'], $data['log_id'], 'task执行完成后回调：' . intval($result));
+
+        self::appendLog($data['log_date_time'], $data['log_id'], '任务执行完成');
     }
 }

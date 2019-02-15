@@ -184,19 +184,34 @@ trait JobTool
     }
 
     /**
+     * 追加执行日志
+     *
+     * @param $log_time
+     * @param $log_id
+     * @param $content
+     */
+    public static function appendLog($log_time, $log_id, $content)
+    {
+        $filename = self::makeLogFileName($log_time, $log_id);
+        $handle = fopen($filename, "a+");
+        fwrite($handle, $content . "\n");
+        fclose($handle);
+    }
+
+    /**
      * jobid log_time拼日志文件名称
      *
      * @param $log_time
-     * @param $job_id
+     * @param $log_id
      */
-    public static function makeLogFileName($log_time, $job_id)
+    public static function makeLogFileName($log_time, $log_id)
     {
 
-        $time = date('Y-m-d', self::convertMicroSToSecond($log_time));
+        $time = '/data/wwwroot/xxl-job-swoole/Log/'. date('Y-m-d', self::convertMicroSToSecond($log_time));
         if (!file_exists($time)) {
             mkdir($time);
         }
-        $filename = $time . DIRECTORY_SEPARATOR . $job_id . '.log';
+        $filename =  $time . DIRECTORY_SEPARATOR . $log_id . '.log';
         return $filename;
     }
 
@@ -218,8 +233,7 @@ trait JobTool
             }
             fclose($file_handle);
         }
-
-        return implode(',', array_slice($filter, $from_line_num));
+        return ['fromLineNum' => $from_line_num, 'toLineNum' => count($filter), 'logContent' => implode(',', array_slice($filter, ($from_line_num -1 )))];
     }
 
     /**
@@ -265,7 +279,7 @@ trait JobTool
         $map = [
             'platform' => $project_name .'/ecs/public/index.php',
         ];
-        return isset($map[$project_name]) ? $map[$project_name] : [];
+        return isset($map[$project_name]) ? $map[$project_name] : '';
 
     }
 }

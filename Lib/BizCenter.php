@@ -90,23 +90,23 @@ class BizCenter
      * @param $logDateTim
      * @param $execute_result
      */
-    public function callback($time, $log_id, $logDateTim, $execute_result)
+    public function callback($time, $log_id, $requet_id, $logDateTim, $execute_result)
     {
         $params = json_encode([
+            'requestId' => $requet_id,
             'createMillisTime' => $time,
             'accessToken' => '',
             'className' => 'com.xxl.job.core.biz.AdminBiz',
             'methodName' => 'callback',
-            'parameterTypes' => ['com.xxl.job.core.biz.model.HandleCallbackParam'],
+            'parameterTypes' => ['java.util.List'],
             'parameters' => [
-                [
+                [[
                     'logId' => $log_id,
                     'logDateTim' => $logDateTim,
                     'executeResult' => $execute_result
-                ]
+                ]]
             ]
         ]);
-
         $message = JobTool::packSendData($params);
         $this->client->send($message);
         $data = $this->client->recv();

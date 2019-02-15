@@ -25,7 +25,6 @@ class Cmd
 
     public static function exec($cmd, $name)
     {
-
         // 进程检测
         if (CmdProcess::processCheckExist()) {
 
@@ -41,7 +40,6 @@ class Cmd
         } else {
             if ($cmd == 'start') {
                 $server_info = self::getServerIni($name);
-                // 执行server
                 if (CmdProcess::start($server_info['conf'])) {
                     $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
                     $time = self::convertSecondToMicroS();

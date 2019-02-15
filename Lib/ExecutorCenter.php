@@ -52,14 +52,16 @@ class ExecutorCenter
      * @param $log_time
      * @param $job_id
      * @param $from_line_num
-     * @return string
+     * @return array
      */
     public static function log($log_time, $job_id, $from_line_num, $table)
     {
 
         $log_file_name = JobTool::makeLogFileName($log_time, $job_id);
 
-        return JobTool::readLog($log_file_name, $from_line_num);
+        $log_content = JobTool::readLog($log_file_name, $from_line_num);
+
+        return ['code' => Code::SUCCESS_CODE, 'msg' => '', 'content' => $log_content];
     }
 
 
@@ -85,12 +87,14 @@ class ExecutorCenter
      * @param $params
      * @param Server $server
      */
-    public static function run($params, Server $server)
+    public static function run($params, $request_id, Server $server)
     {
         foreach ($params as $param) {
             // 投递异步任务
-            $task_id = $server->task($param);
-        }
+            $param['requestId'] = $request_id;
+            self::appendLog($param['logDateTim'], $param['logId'], '调度中心执行任务参数：' . json_encode($params));
 
+            $server->task($param);
+        }
     }
 }
