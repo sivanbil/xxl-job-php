@@ -233,7 +233,7 @@ trait JobTool
             }
             fclose($file_handle);
         }
-        return ['fromLineNum' => $from_line_num, 'toLineNum' => count($filter), 'logContent' => implode(',', array_slice($filter, ($from_line_num -1 )))];
+        return ['fromLineNum' => $from_line_num, 'toLineNum' => count($filter), 'logContent' => implode('', array_slice($filter, ($from_line_num -1 )))];
     }
 
     /**

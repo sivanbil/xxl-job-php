@@ -129,7 +129,7 @@ class TcpServer
                 $result = ExecutorCenter::kill($parameters[0], $this->table);
                 break;
             case 'log':
-                $result = ExecutorCenter::log($parameters[0], $parameters[1], $parameters[2], $this->table);
+                $result = ExecutorCenter::log($parameters[0], $parameters[1], $parameters[2]);
                 break;
             case 'beat':
                 $result = ExecutorCenter::beat();
@@ -139,7 +139,7 @@ class TcpServer
         }
         // 打包通信数据
         $message = ['result' => $result, 'requestId' => $req['requestId'], 'errorMsg' => null];
-
+        //var_dump(self::packSendData(json_encode($message)));
         // 发送数据包
         $server->send($fd, self::packSendData(json_encode($message)));
     }
@@ -172,6 +172,7 @@ class TcpServer
         $index_path = $this->conf['project']['root_path'] . $project_index;
         // 拼成可以调用脚本的样子
         if (empty($handler_info_arr[3])) {
+            // 测试用
             $class_path = '';
             $index_path = '/data/wwwroot/xxl-job-swoole/Tests/test_cli.php';
         } else {
@@ -197,6 +198,7 @@ class TcpServer
             self::appendLog($data['logDateTim'], $data['logId'], '执行task后返回结果：' . $result);
 
         }, false);
+        //$process->useQueue(1, 2);
         $process->start();
         $wait_res = Process::wait();
         if ($wait_res['code']) {

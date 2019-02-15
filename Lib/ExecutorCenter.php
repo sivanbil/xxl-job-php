@@ -54,7 +54,7 @@ class ExecutorCenter
      * @param $from_line_num
      * @return array
      */
-    public static function log($log_time, $job_id, $from_line_num, $table)
+    public static function log($log_time, $job_id, $from_line_num)
     {
 
         $log_file_name = JobTool::makeLogFileName($log_time, $job_id);
