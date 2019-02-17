@@ -100,7 +100,7 @@ trait JobTool
             return ['code' => 404, 'msg' => 'missing config path' . $configPath];
         }
         $config = parse_ini_file($configPath, true);
-        return ['code' => 0, 'conf' => $config];
+        return ['code' => Code::SUCCESS_CODE, 'conf' => $config];
     }
 
     /**
@@ -292,7 +292,7 @@ trait JobTool
     {
         $ret = system("ps aux | grep '" . $name . "' | grep -v grep ");
         preg_match('/\d+/', $ret, $match);//匹配出来进程号
-        $server_id = $match['0'];
+        $server_id = $match[0];
         if (posix_kill($server_id, 15)) {
             //如果成功了
             return true;
@@ -313,12 +313,48 @@ trait JobTool
         if (!$match) {
             return false;
         }
-        $server_id = $match['0'];
+        $server_id = $match[0];
         if ($server_id) {
             //如果成功了
             return true;
         } else {
             return false;
         }
+
+    }
+
+    /**
+     * @param $data
+     * @param $conf
+     * @return array
+     */
+    public static function getHandlerParams($data, $conf)
+    {
+        // 项目名_类名_方法名
+        $executor_handler = $data['executorHandler'];
+        $handler_info_arr = explode('_', $executor_handler);
+        // /project/platform/ecs/public/index.php  teacherQuality/crontab/syncClassAndExtraDataMonthly -m=1 -c=2
+        // 项目地址
+        $project_index = self::getProjectIndex($handler_info_arr[0]);
+        // 入口文件地址
+        $index_path = $conf['project']['root_path'] . $project_index;
+        // 拼成可以调用脚本的样子
+        if (empty($handler_info_arr[3])) {
+            // 测试用
+            $class_path = '';
+            $index_path = '/data/wwwroot/xxl-job-swoole/Tests/test_cli.php';
+        } else {
+            $class_path = $handler_info_arr[1] . '/' . $handler_info_arr[2] . '/' . $handler_info_arr[3];
+        }
+        $params = [$index_path, $class_path];
+        // 带执行参数
+        if ($data['executorParams']) {
+            $params_key_values = explode('&',$data['executorParams']);
+
+            foreach ($params_key_values as $params_key_value) {
+                $params[] = '-' . $params_key_value;
+            }
+        }
+        return $params;
     }
 }

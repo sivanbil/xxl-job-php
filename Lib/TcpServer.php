@@ -161,32 +161,7 @@ class TcpServer
      */
     public function onTask(Server $server, $task_id, $from_id, $data)
     {
-        // 项目名_类名_方法名
-        $executor_handler = $data['executorHandler'];
-        $handler_info_arr = explode('_', $executor_handler);
-        // /project/platform/ecs/public/index.php  teacherQuality/crontab/syncClassAndExtraDataMonthly -m=1 -c=2
-        // 项目地址
-        $project_index = self::getProjectIndex($handler_info_arr[0]);
-        // 入口文件地址
-        $index_path = $this->conf['project']['root_path'] . $project_index;
-        // 拼成可以调用脚本的样子
-        if (empty($handler_info_arr[3])) {
-            // 测试用
-            $class_path = '';
-            $index_path = '/data/wwwroot/xxl-job-swoole/Tests/test_cli.php';
-        } else {
-            $class_path = $handler_info_arr[1] . '/' . $handler_info_arr[2] . '/' . $handler_info_arr[3];
-        }
-        $params = [$index_path, $class_path];
-
-        // 带执行参数
-        if ($data['executorParams']) {
-            $params_key_values = explode('&',$data['executorParams']);
-
-            foreach ($params_key_values as $params_key_value) {
-                $params[] = '-' . $params_key_value;
-            }
-        }
+        $params = self::getHandlerParams($data, $this->conf);
         // 设置到swoole_table里
         $process_name = implode(' ', $params);
 
@@ -196,35 +171,21 @@ class TcpServer
             $exist = false;
         }
 
-        self::appendLog($data['logDateTim'], $data['logId'], '执行task参数：' . json_encode($params));
-
-        // 如果是顺序执行，可以丢弃之后的
-        // 然后执行脚本
-        $process = new Process(function (Process $worker) use ($data, $process_name) {
-            while ($msg = $worker->pop()) {
-                if ($msg === false) {
-                    break;
-                }
-                // 丢弃之后的
-                $params = json_decode($msg, true);
-                $worker->exec($this->conf['server']['php'], $params);
-            }
-        }, false);
-        $process->useQueue(1, 2);
-        $process->start();
-        $process->push(json_encode($params));
-        $wait_res = Process::wait();
-        if ($wait_res['code']) {
-            echo  "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
-            exit;
+        // 丢弃下一个
+        if ($exist && $data['executorBlockStrategy'] == JobStrategy::DISCARD_NEXT_SCHEDULING) {
+            self::appendLog($data['logDateTim'], $data['logId'], '此task因策略需要被丢弃：' . json_encode($params));
+            return JobStrategy::discard($data);
         }
-        return json_encode([
-            'job_id' => $data['jobId'],
-            'request_id' => $data['requestId'],
-            'log_id' => $data['logId'],
-            'log_date_time' => $data['logDateTim']]
-        );
 
+        // 丢弃之前的使用新的
+        if ($exist && $data['executorBlockStrategy'] == JobStrategy::USE_NEXT_SCHEDULING) {
+            self::appendLog($data['logDateTim'], $data['logId'], '上一个task因策略需要被丢弃：' . json_encode($params));
+            self::killScriptProcess($process_name);
+        }
+
+        self::appendLog($data['logDateTim'], $data['logId'], '执行task参数：' . json_encode($params));
+        // 按照队列执行
+        return JobStrategy::serial($data, $process_name, $params, $exist);
     }
 
     /**

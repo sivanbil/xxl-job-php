@@ -27,20 +27,12 @@ class Cmd
     {
         // 进程检测
         if (CmdProcess::processCheckExist()) {
-
-            switch ($cmd) {
-                case 'shutdown':
-                    $return = self::sendCmdToSock($cmd, $name);
-                    break;
-                case 'stop':
-
-                    break;
-            }
-
+            $return = self::sendCmdToSock($cmd, $name);
         } else {
             if ($cmd == 'start') {
                 $server_info = self::getServerIni($name);
                 if (CmdProcess::start($server_info['conf'])) {
+                    self::startServerSock();
                     $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
                     $time = self::convertSecondToMicroS();
                     // 第一次注册
@@ -52,7 +44,6 @@ class Cmd
                     exit;
                 }
             }
-
         }
     }
 
@@ -123,5 +114,51 @@ class Cmd
         echo "if you want to know running server name please input :  php index.php status" . PHP_EOL;
         echo "if you want to know server list that you can start please input :  php index.php list" . PHP_EOL;
         exit;
+    }
+
+    /**
+     * @description 通过unix sock信息
+     */
+    public static function startServerSock()
+    {
+        //cli_set_process_title(SUPER_PROCESS_NAME);
+        //这边其实也是也是demon进程
+        $sock_server = new Server(UNIX_SOCK_PATH, 0, SWOOLE_BASE, SWOOLE_UNIX_STREAM);
+
+        $sock_server->set([
+            'worker_num' => 1,
+            'daemonize' => 1
+        ]);
+
+        $sock_server->on('connect', function() {
+
+        });
+
+        // 处理各种信号指令
+        $sock_server->on('receive', function ($server, $fd, $from_id, $data) {
+            $info = json_decode($data, true);
+            $cmd = $info['cmd'];
+            switch ($cmd) {
+                case 'start':
+                    break;
+                case 'stop':
+                    break;
+                case 'shutdown':
+
+                    break;
+                case 'reload':
+
+                    break;
+                case 'restart':
+
+                    break;
+                case 'status':
+                default:
+                    break;
+            }
+
+        });
+
+        $sock_server->start();
     }
 }
