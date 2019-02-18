@@ -81,10 +81,14 @@ class TcpServer
      */
     public function onStart(Server $server )
     {
+
         // 定时器去注册
         $server->tick($this->conf['xxljob']['registry_interval_ms'], function() {
             $biz_center = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
             $time = self::convertSecondToMicroS();
+            if (empty($this->conf['xxljob']['disable_registry'])) {
+                $biz_center->disable_registry = $this->conf['xxljob']['disable_registry'];
+            }
             $biz_center->registry($time, $this->conf['server']['app_name'], $this->conf['server']['ip'] . ':' . $this->conf['server']['port']);
         });
     }

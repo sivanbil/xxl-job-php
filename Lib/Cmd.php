@@ -38,6 +38,9 @@ class Cmd
                     self::startServerSock();
                     $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
                     $time = self::convertSecondToMicroS();
+                    if (empty($server_info['conf']['xxljob']['disable_registry'])) {
+                        $biz_center->disable_registry = $server_info['conf']['xxljob']['disable_registry'];
+                    }
                     // 第一次注册
                     $biz_center->registry($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
                 }

@@ -14,6 +14,8 @@ class BizCenter
 {
     public $client = NULL;
 
+    public $disable_registry = false;
+
     public function __construct($host = '127.0.0.1', $port = '8987')
     {
 
@@ -30,6 +32,9 @@ class BizCenter
      */
     public function registry($time, $app_name, $address)
     {
+        if ($this->disable_registry) {
+            return null;
+        }
         // 执行注册 server
         $params = json_encode([
             'createMillisTime' => $time,
