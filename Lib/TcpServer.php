@@ -102,6 +102,9 @@ class TcpServer
     public function onStart(Server $server )
     {
         self::setProcessName($this->_process_name . ': master process');
+
+        file_put_contents($this->_master_pid_file, $server->master_pid);
+        file_put_contents($this->_manager_pid_file, $server->manager_pid);
         // 定时器去注册
         $server->tick($this->conf['xxljob']['registry_interval_ms'], function() {
             $biz_center = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
