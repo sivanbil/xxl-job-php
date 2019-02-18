@@ -11,6 +11,8 @@ namespace Lib;
 class Cmd
 {
     use JobTool;
+
+    public static $running_server;
     /**
      * 需要支持以下几种命令
      * start    启动

@@ -19,18 +19,18 @@ class JobStrategy
     /**
      * @param $data
      * @param $process_name
-     * @param $exist
+     * @param $table
      * @return false|string
      */
-    public static function serial($data, $process_name, $params, $exist)
+    public static function serial($data, $process_name, $params, Table $table)
     {
         // 然后执行脚本
-        $process = new Process(function (Process $worker) use ($data, $process_name, $params, $exist) {
+        $process = new Process(function (Process $worker) use ($data, $process_name, $params, $table) {
             while ($msg = $worker->pop()) {
                 if ($msg === false) {
                     break;
                 }
-                if ($exist) {
+                if ($table->get($data['jobId'])) {
                     $worker->push($msg);
                     break;
                 }

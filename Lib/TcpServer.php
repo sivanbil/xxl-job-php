@@ -185,7 +185,7 @@ class TcpServer
 
         self::appendLog($data['logDateTim'], $data['logId'], '执行task参数：' . json_encode($params));
         // 按照队列执行
-        return JobStrategy::serial($data, $process_name, $params, $exist);
+        return JobStrategy::serial($data, $process_name, $params, $this->table);
     }
 
     /**
