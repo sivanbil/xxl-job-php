@@ -29,6 +29,7 @@ class Cmd
     {
         // 进程检测
         if (CmdProcess::processCheckExist()) {
+            // reload stop restart
             $return = self::sendCmdToSock($cmd, $name);
         } else {
             if ($cmd == 'start') {
