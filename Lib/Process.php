@@ -17,7 +17,7 @@ class Process extends \Swoole\Process
         //先杀掉所有的run server
         foreach ($return['data'] as $server) {
             // array('php'=>,'name'=)
-            $ret = system("ps aux | grep " . $server['name'] . " | grep master | grep -v grep ");
+            $ret = system("ps aux | grep " . $server['name'] . " | grep -v grep ");
             preg_match('/\d+/', $ret, $match);//匹配出来进程号
             $server_id = $match['0'];
             if (posix_kill($server_id, 15)) {//如果成功了

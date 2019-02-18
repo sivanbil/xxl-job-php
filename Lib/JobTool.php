@@ -238,6 +238,8 @@ trait JobTool
     }
 
     /**
+     * 发信号到server
+     *
      * @param $cmd
      * @param $name
      * @return mixed|string
@@ -332,8 +334,8 @@ trait JobTool
     {
         // 项目名_类名_方法名
         $executor_handler = $data['executorHandler'];
+        // 规则解析
         $handler_info_arr = explode('_', $executor_handler);
-        // /project/platform/ecs/public/index.php  teacherQuality/crontab/syncClassAndExtraDataMonthly -m=1 -c=2
         // 项目地址
         $project_index = self::getProjectIndex($handler_info_arr[0]);
         // 入口文件地址
@@ -349,7 +351,7 @@ trait JobTool
         $params = [$index_path, $class_path];
         // 带执行参数
         if ($data['executorParams']) {
-            $params_key_values = explode('&',$data['executorParams']);
+            $params_key_values = explode('&', $data['executorParams']);
 
             foreach ($params_key_values as $params_key_value) {
                 $params[] = '-' . $params_key_value;
