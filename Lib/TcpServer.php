@@ -24,6 +24,15 @@ class TcpServer
 
     public $table;
 
+    protected $_manager_pid_file;
+
+    protected $_master_pid_file;
+
+    protected $_process_name = 'php-executor-server';
+
+    protected $_run_path = '/tmp';
+
+
     /**
      * TcpServer constructor.
      * @param $conf
@@ -34,17 +43,24 @@ class TcpServer
 
         $this->server = new Server($conf['server']['ip'], $conf['server']['port']);
         $this->server->set($conf['setting']);
+        if (!empty($conf['server']['process_name'])) {
+            $this->_process_name = $conf['server']['process_name'];
+        }
 
         // 注册回调事件
         $this->server->on('start',   [$this, 'onStart']);
         $this->server->on('connect', [$this, 'onConnect']);
         $this->server->on('receive', [$this, 'onReceive']);
         $this->server->on('close',   [$this, 'onClose']);
+        $this->server->on('managerStart', array($this, 'onManagerStart'));
+
 
         if (isset($conf['setting']['task_worker_num'])) {
             $this->server->on('Task', array($this, 'onTask'));
             $this->server->on('Finish', array($this, 'onFinish'));
         }
+        $this->_master_pid_file = $this->_run_path . '/' . $this->_process_name . '.master.pid';
+        $this->_manager_pid_file = $this->_run_path . '/' . $this->_process_name . '.manager.pid';
 
         $this->table = new Table($this->conf['table']['size']);
         $this->table->column('task_id', Table::TYPE_INT);
@@ -52,19 +68,7 @@ class TcpServer
         $this->table->create();
     }
 
-    /**
-     * @param $name
-     */
-    public function setProcessName($name)
-    {
-        if (function_exists('cli_set_process_title')) {
-            cli_set_process_title($name);
-        } else if (function_exists('swoole_set_process_name')) {
-            swoole_set_process_name($name);
-        } else {
-            trigger_error(__METHOD__ . " failed. require cli_set_process_title or swoole_set_process_name.");
-        }
-    }
+
 
     /**
      * 启动
@@ -75,13 +79,29 @@ class TcpServer
     }
 
     /**
+     * 关闭
+     */
+    public function shutdown()
+    {
+        $this->server->shutdown();
+        unlink($this->_master_pid_file);
+        unlink($this->_manager_pid_file);
+    }
+
+    public function onManagerStart(Server $server)
+    {
+        // rename manager process
+        self::setProcessName($this->_process_name . ': manager process');
+    }
+
+    /**
      * 注册回调事件的启动
      *
      * @param $server
      */
     public function onStart(Server $server )
     {
-
+        self::setProcessName($this->_process_name . ': master process');
         // 定时器去注册
         $server->tick($this->conf['xxljob']['registry_interval_ms'], function() {
             $biz_center = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
@@ -223,5 +243,99 @@ class TcpServer
         self::appendLog($data['log_date_time'], $data['log_id'], 'task回调:' . $msg);
 
         self::appendLog($data['log_date_time'], $data['log_id'], '任务执行完成');
+    }
+
+    /**
+     * @return bool
+     */
+    protected function reload()
+    {
+        $manager_id = $this->getManagerPid();
+        if (!$manager_id) {
+            return false;
+        } elseif (!posix_kill($manager_id, 10)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @return bool|string
+     */
+    protected function getManagerPid()
+    {
+        $pid = false;
+        if (file_exists($this->_manager_pid_file)) {
+            $pid = file_get_contents($this->_manager_pid_file);
+        }
+        return $pid;
+    }
+
+    /**
+     * @return bool|string
+     */
+    protected function getMasterPid()
+    {
+        $pid = false;
+        if (file_exists($this->_master_pid_file)) {
+            $pid = file_get_contents($this->_master_pid_file);
+        }
+        return $pid;
+    }
+
+    /**
+     * @return bool
+     */
+    protected function status()
+    {
+        $this->log("*****************************************************************");
+        $this->log("Summary: ");
+        $this->log("Swoole Version: " . SWOOLE_VERSION);
+        if (!$this->checkServerIsRunning()) {
+            $this->log($this->_process_name . ": is running \033[31;40m [FAIL] \033[0m");
+            $this->log("*****************************************************************");
+            return false;
+        }
+        $this->log($this->_process_name . ": is running \033[31;40m [OK] \033[0m");
+        $this->log("master pid : is " . $this->getMasterPid());
+        $this->log("manager pid : is " . $this->getManagerPid());
+        $this->log("*****************************************************************");
+    }
+
+    /**
+     * @return bool
+     */
+    protected function checkServerIsRunning()
+    {
+        $pid = $this->getMasterPid();
+        return $pid && $this->checkPidIsRunning($pid);
+    }
+
+    /**
+     * @param $pid
+     * @return bool
+     */
+    protected function checkPidIsRunning($pid)
+    {
+        return posix_kill($pid, 0);
+    }
+
+    /**
+     * @param $process_name
+     */
+    public function setProcessName($process_name)
+    {
+        $this->_process_name = $process_name;
+    }
+
+    /**
+     * @param $msg
+     */
+    public function log($msg)
+    {
+        if ($this->server->setting['log_file'] && file_exists($this->server->setting['log_file'])) {
+            error_log($msg . PHP_EOL, 3, $this->server->setting['log_file']);
+        }
+        echo $msg . PHP_EOL;
     }
 }

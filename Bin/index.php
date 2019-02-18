@@ -19,7 +19,7 @@ define('CRON_PATH', APP_PATH . '/Cron');
 
 define('SRC_PATH', APP_PATH . '/Src');
 
-define('SUPER_PROCESS_NAME', 'xxl-job-php-executor');
+define('SUPER_PROCESS_NAME', 'xxl-job-executor-server');
 
 define('UNIX_SOCK_PATH', "/tmp/" . SUPER_PROCESS_NAME . ".sock");
 

@@ -257,6 +257,91 @@ trait JobTool
     }
 
     /**
+     * @description 通过unix sock信息
+     */
+    public static function startServerSock($running_servers)
+    {
+        self::setProcessName(SUPER_PROCESS_NAME);
+        //这边其实也是也是demon进程
+        $sock_server = new Server(UNIX_SOCK_PATH, 0, SWOOLE_BASE, SWOOLE_UNIX_STREAM);
+
+        // running servers
+        $sock_server->running_servers = $running_servers;
+
+        $sock_server->set([
+            'worker_num' => 1,
+            'daemonize' => 1
+        ]);
+
+        $sock_server->on('connect', function() {
+
+        });
+
+        // 处理各种信号指令
+        $sock_server->on('receive', function (Server $server, $fd, $from_id, $data) {
+            $info = json_decode($data, true);
+            $cmd = $info['cmd'];
+            $server_name = $info['server'];
+            // 不存在则启动
+            $server_conf = self::getServerIni($server_name);
+
+            switch ($cmd) {
+                case 'start':
+                    if (isset($serv->running_servers[$server_name])) {
+                        $server->send($fd, json_encode(['code' => 200, "msg" => $server_name . ' is already running']));
+                        return;
+                    }
+
+                    if ($server_conf['code'] != Code::SUCCESS_CODE) {
+                        $server->send($fd, json_encode($server_conf));
+                        return ;
+                    }
+
+                    // 进程守护
+                    if (CmdProcess::execute($server_conf, $cmd)) {
+                        $server->running_servers[$server_name] = ['server_info' => $server_conf, 'name' => $server_name];
+                        $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name} start" . " \033[32;40m [SUCCESS] \033[0m"]));
+                        return;
+                    }
+                    break;
+                case 'stop':
+                    unset($server->running_servers[$server_name]);
+                    CmdProcess::execute($server_conf, 'stop');
+                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name} stop" . " \033[32;40m [SUCCESS] \033[0m"]));
+
+                    break;
+                case 'shutdown':
+                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers]));
+                    //清除所有的runServer序列
+                    unset($server->running_servers);
+                    break;
+                case 'reload':
+                    CmdProcess::execute($server_conf, $cmd);
+                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name}  reload " . " \033[32;40m [SUCCESS] \033[0m"]));
+                    return;
+                    break;
+                case 'restart':
+                    //首先unset 防止被自动拉起，然后停止，然后sleep 然后start
+                    unset($server->running_servers[$server_name]);//从runserver中干掉
+                    CmdProcess::execute($server_conf, 'stop');
+                    sleep(2);
+                    CmdProcess::execute($server_conf, 'start');
+                    $server->running_servers[$server_name] = ['server_info' => $server_conf, 'name' => $server_name]; //添加到runServer中
+                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name} restart  \033[32;40m [SUCCESS] \033[0m"]));
+                    return;
+                    break;
+                case 'status':
+                default:
+                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers]));
+                    break;
+            }
+
+        });
+
+        $sock_server->start();
+    }
+
+    /**
      * @return int
      */
     public static function convertSecondToMicroS()
@@ -358,5 +443,19 @@ trait JobTool
             }
         }
         return $params;
+    }
+
+    /**
+     * @param $name
+     */
+    public static function setProcessName($name)
+    {
+        if (function_exists('cli_set_process_title')) {
+            cli_set_process_title($name);
+        } else if (function_exists('swoole_set_process_name')) {
+            swoole_set_process_name($name);
+        } else {
+            trigger_error(__METHOD__ . " failed. require cli_set_process_title or swoole_set_process_name.");
+        }
     }
 }

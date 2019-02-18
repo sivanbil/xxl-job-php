@@ -29,4 +29,10 @@ $server = new \Lib\TcpServer($conf);
 // process 名称设置 mac下安全设置
 $server->setProcessName($conf['server']['process_name']);
 // 启动server
-$server->start();
+if ($cmd == 'start') {
+    $server->start();
+}
+
+if ($cmd == 'shutdown') {
+    $server->shutdown();
+}

@@ -27,16 +27,81 @@ class Cmd
 
     public static function exec($cmd, $name)
     {
+        $server_info = self::getServerIni($name);
+
+        $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
+
         // 进程检测
         if (CmdProcess::processCheckExist()) {
             // reload stop restart
             $return = self::sendCmdToSock($cmd, $name);
+
+            if ($cmd == 'shutdown') {
+
+                // 调度中心rpc实例化
+                $time = self::convertSecondToMicroS();
+                if (empty($server_info['conf']['xxljob']['disable_registry'])) {
+                    $biz_center->disable_registry = $server_info['conf']['xxljob']['disable_registry'];
+                }
+                // 先移除
+                $biz_center->registryRemove($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
+
+                // 先移除
+                //获取status 之后去杀掉进程
+                if ($return['code'] == Code::SUCCESS_CODE) {
+                    //先杀掉所有的run server
+                    foreach ($return['data'] as $server) {
+                        // array('php'=>,'name'=)
+                        $ret = system("ps aux | grep " . $server['name'] . " | grep master | grep -v grep ");
+                        preg_match('/\d+/', $ret, $match);//匹配出来进程号
+                        $server_id = $match['0'];
+                        if (posix_kill($server_id, 15)) {//如果成功了
+                            echo 'stop ' . $server['name'] . "\033[32;40m [SUCCESS] \033[0m" . PHP_EOL;
+                        } else {
+                            echo 'stop ' . $server['name'] . "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
+                        }
+                    };
+                    //然后开始杀Swoole-Controller
+                    $ret = system("  ps aux | grep " . SUPER_PROCESS_NAME . " | grep -v grep");
+                    preg_match('/\d+/', $ret, $match);
+                    $server_id = $match['0'];
+                    if (posix_kill($server_id, 15)) {//如果成功了
+                        echo 'stop ' . SUPER_PROCESS_NAME . "\033[32;40m [SUCCESS] \033[0m" . PHP_EOL;
+                    } else {
+                        echo 'stop ' . SUPER_PROCESS_NAME . "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
+                    }
+                } else {
+                    echo 'cmd is ' . $cmd . PHP_EOL . ' and return is ' . print_r($return, true) . PHP_EOL;
+                }
+                exit;
+            }
+
+            // 命令发给服务
+            if ($return['code'] == Code::SUCCESS_CODE) {
+                // 临时的status优化
+                if ($cmd == 'status') {
+                    if (empty($return['data'])) {
+                        echo 'No Server is Running' . PHP_EOL;
+                    } else {
+                        echo SUPER_PROCESS_NAME . ' is ' . "\033[32;40m [RUNNING] \033[0m" . PHP_EOL;
+                        foreach ($return['data'] as $single) {
+                            echo 'Server Name is ' . "\033[32;40m " . $single['name'] . " \033[0m" . '  ' . 'and php start path is ' . $single['php'] . PHP_EOL;
+                        }
+                    }
+                } else {
+                    echo 'cmd is ' . $cmd . PHP_EOL . ' and return is ' . print_r($return['msg'], true) . PHP_EOL;
+                }
+            } else {
+                echo 'cmd is ' . $cmd . PHP_EOL . ' and return is ' . print_r($return['msg'], true) . PHP_EOL;
+            }
+            exit;
         } else {
             if ($cmd == 'start') {
-                $server_info = self::getServerIni($name);
-                if (CmdProcess::start($server_info['conf'])) {
-                    self::startServerSock();
-                    $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
+                // 启动完毕后
+                if (CmdProcess::execute($server_info['conf'])) {
+                    $running_servers[$name] = ['server_info' => $server_info, 'name' => $name];
+                    self::startServerSock($running_servers);
+                    // 调度中心rpc实例化
                     $time = self::convertSecondToMicroS();
                     if (empty($server_info['conf']['xxljob']['disable_registry'])) {
                         $biz_center->disable_registry = $server_info['conf']['xxljob']['disable_registry'];
@@ -46,7 +111,7 @@ class Cmd
                 }
             } else {
                 if ($cmd == 'shutdown' || $cmd == 'status') {
-                    echo SUPER_PROCESS_NAME . ' is not running, please check it' . PHP_EOL;
+                    echo SUPER_PROCESS_NAME . ' is not running, please check it' ."\033[31;40m [FAIL] \033[0m" . PHP_EOL;
                     exit;
                 }
             }
@@ -122,49 +187,5 @@ class Cmd
         exit;
     }
 
-    /**
-     * @description 通过unix sock信息
-     */
-    public static function startServerSock()
-    {
-        //cli_set_process_title(SUPER_PROCESS_NAME);
-        //这边其实也是也是demon进程
-        $sock_server = new Server(UNIX_SOCK_PATH, 0, SWOOLE_BASE, SWOOLE_UNIX_STREAM);
 
-        $sock_server->set([
-            'worker_num' => 1,
-            'daemonize' => 1
-        ]);
-
-        $sock_server->on('connect', function() {
-
-        });
-
-        // 处理各种信号指令
-        $sock_server->on('receive', function ($server, $fd, $from_id, $data) {
-            $info = json_decode($data, true);
-            $cmd = $info['cmd'];
-            switch ($cmd) {
-                case 'start':
-                    break;
-                case 'stop':
-                    break;
-                case 'shutdown':
-
-                    break;
-                case 'reload':
-
-                    break;
-                case 'restart':
-
-                    break;
-                case 'status':
-                default:
-                    break;
-            }
-
-        });
-
-        $sock_server->start();
-    }
 }

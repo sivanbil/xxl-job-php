@@ -14,7 +14,7 @@ class CmdProcess
      * @param $server_info
      * @return bool
      */
-    public static function start($conf_info)
+    public static function execute($conf_info, $cmd = 'start')
     {
         // 创建并启动进程
         $process = new Process(function (Process $worker) use ($conf_info) {
