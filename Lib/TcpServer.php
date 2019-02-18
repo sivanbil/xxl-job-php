@@ -87,7 +87,6 @@ class TcpServer
             $time = self::convertSecondToMicroS();
             $biz_center->registry($time, $this->conf['server']['app_name'], $this->conf['server']['ip'] . ':' . $this->conf['server']['port']);
         });
-        error_log('Start server success.' . PHP_EOL, 3, '/tmp/SuperMaster.log');
     }
 
     /**
