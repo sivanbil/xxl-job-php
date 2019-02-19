@@ -47,10 +47,12 @@ if (empty($argv[2])) {
     $cmd = $argv[2];
 }
 
+$process_name = empty($argv[3]) ? '' : $argv[3];
+
 // 检测参数
 if (\Lib\Executor\Cmd::checkArgvValid($cmd, $name)) {
     // 命令执行
-    \Lib\Executor\Cmd::exec($cmd, $name);
+    \Lib\Executor\Cmd::exec($cmd, $name, $process_name);
 } else {
     // 操作提示
     \Lib\Executor\Cmd::tips();

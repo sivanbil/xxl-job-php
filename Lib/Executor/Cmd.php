@@ -28,10 +28,12 @@ class Cmd
      * startAll 启动所有
      */
 
-    public static function exec($cmd, $name)
+    public static function exec($cmd, $name, $process_name = '')
     {
         $server_info = self::getServerIni($name);
-
+        if ($process_name) {
+            $server_info['conf']['server']['process_name'] = $process_name;
+        }
         $biz_center = null;
         if (!empty($server_info['conf']['xxljob']['open_registry'])) {
             $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
