@@ -247,9 +247,11 @@ trait JobTool
     public static function sendCmdToSock($cmd, $name)
     {
         $client = new Client(SWOOLE_UNIX_STREAM, SWOOLE_SOCK_SYNC);
-        $client->connect(UNIX_SOCK_PATH, 0, 3);
+        var_dump($client);
+        $client->connect(UNIX_SOCK_PATH, 0, 10);
         $client->send(json_encode(['cmd' => $cmd, 'name' => $name]));
         $ret = $client->recv();
+        var_dump($ret);
         $ret = json_decode($ret, true);
         $client->close();
 
@@ -279,6 +281,7 @@ trait JobTool
 
         // 处理各种信号指令
         $sock_server->on('receive', function (Server $server, $fd, $from_id, $data) {
+            var_dump($data);
             $info = json_decode($data, true);
             $cmd = $info['cmd'];
             $server_name = $info['server'];
