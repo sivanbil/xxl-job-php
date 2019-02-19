@@ -84,9 +84,6 @@ class TcpServer
     public function shutdown()
     {
         $this->server->shutdown();
-        unlink($this->_master_pid_file);
-        unlink($this->_manager_pid_file);
-
         $master_id = $this->getMasterPid();
         if (!$master_id) {
             $this->log("[warning] " . $this->_process_name . ": can not find master pid file");
@@ -97,6 +94,8 @@ class TcpServer
             $this->log($this->_process_name . ": stop\033[31;40m [FAIL] \033[0m");
             return false;
         }
+        unlink($this->_master_pid_file);
+        unlink($this->_manager_pid_file);
     }
 
     public function onManagerStart(Server $server)

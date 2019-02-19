@@ -305,13 +305,13 @@ trait JobTool
                     }
                     break;
                 case 'stop':
-                    unset($server->running_servers[$server_name]);
                     CmdProcess::execute($server_conf, 'stop');
                     $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name} stop" . " \033[32;40m [SUCCESS] \033[0m"]));
-
+                    unset($server->running_servers[$server_name]);
                     break;
                 case 'shutdown':
                     $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers]));
+                    CmdProcess::execute($server_conf, 'shutdown');
                     //清除所有的runServer序列
                     unset($server->running_servers);
                     break;
