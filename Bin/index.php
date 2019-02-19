@@ -48,10 +48,10 @@ if (empty($argv[2])) {
 }
 
 // 检测参数
-if (\Lib\Cmd::checkArgvValid($cmd, $name)) {
+if (\Lib\Executor\Cmd::checkArgvValid($cmd, $name)) {
     // 命令执行
-    \Lib\Cmd::exec($cmd, $name);
+    \Lib\Executor\Cmd::exec($cmd, $name);
 } else {
     // 操作提示
-    \Lib\Cmd::tips();
+    \Lib\Executor\Cmd::tips();
 }
