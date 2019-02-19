@@ -104,7 +104,7 @@ class Cmd
                     }
                 }
             } else {
-                if ($cmd == 'shutdown' || $cmd == 'status') {
+                if ($cmd == 'shutdown' || $cmd == 'status' || $cmd == 'stop' || $cmd == 'reload' || $cmd == 'restart') {
                     echo SUPER_PROCESS_NAME . ' is not running, please check it' ."\033[31;40m [FAIL] \033[0m" . PHP_EOL;
                     exit;
                 }
