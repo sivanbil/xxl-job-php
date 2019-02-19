@@ -80,6 +80,8 @@ class TcpServer
      */
     protected function _initRuntime()
     {
+        $this->_setting = $this->conf['setting'];
+
         $this->_master_pid_file = $this->_run_path . '/' . $this->_process_name . '.master.pid';
         $this->_manager_pid_file = $this->_run_path . '/' . $this->_process_name . '.manager.pid';
         // table
@@ -389,8 +391,8 @@ class TcpServer
      */
     public function log($msg)
     {
-        if ($this->server->setting['log_file'] && file_exists($this->server->setting['log_file'])) {
-            error_log($msg . PHP_EOL, 3, $this->server->setting['log_file']);
+        if (isset($this->_setting['log_file']) && file_exists($this->_setting['log_file'])) {
+            error_log($msg . PHP_EOL, 3, $this->_setting['log_file']);
         }
         echo $msg . PHP_EOL;
     }
