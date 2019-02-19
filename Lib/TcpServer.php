@@ -91,7 +91,7 @@ class TcpServer
     public function onManagerStart(Server $server)
     {
         // rename manager process
-        self::setProcessName($this->_process_name . ': manager process');
+        self::setProcessNameProperty($this->_process_name . ': manager process');
     }
 
     /**
@@ -101,7 +101,7 @@ class TcpServer
      */
     public function onStart(Server $server )
     {
-        self::setProcessName($this->_process_name . ': master process');
+        self::setProcessNameProperty($this->_process_name . ': master process');
 
         file_put_contents($this->_master_pid_file, $server->master_pid);
         file_put_contents($this->_manager_pid_file, $server->manager_pid);
@@ -326,9 +326,11 @@ class TcpServer
     /**
      * @param $process_name
      */
-    public function setProcessName($process_name)
+    public function setProcessNameProperty($process_name)
     {
         $this->_process_name = $process_name;
+
+        self::setProcessName($process_name);
     }
 
     /**
