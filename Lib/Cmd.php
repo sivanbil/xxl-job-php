@@ -97,7 +97,7 @@ class Cmd
                     self::startServerSock($running_servers);
                     // 调度中心rpc实例化
                     $time = self::convertSecondToMicroS();
-                    if (empty($server_info['conf']['xxljob']['open_registry'])) {
+                    if (!empty($server_info['conf']['xxljob']['open_registry'])) {
                         $biz_center->disable_registry = $server_info['conf']['xxljob']['open_registry'];
                         // 第一次注册
                         $biz_center->registry($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
