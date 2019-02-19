@@ -96,6 +96,7 @@ class TcpServer
         }
         unlink($this->_master_pid_file);
         unlink($this->_manager_pid_file);
+        return true;
     }
 
     public function onManagerStart(Server $server)
