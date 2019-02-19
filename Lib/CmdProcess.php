@@ -16,7 +16,6 @@ class CmdProcess
      */
     public static function execute($conf_info, $cmd = 'start')
     {
-        var_dump($conf_info);
         // 创建并启动进程
         $process = new Process(function (Process $worker) use ($conf_info, $cmd) {
             // 启动进程守护

@@ -124,7 +124,6 @@ class TcpServer
      */
     public function shutdown()
     {
-        $this->server->shutdown();
         $master_id = $this->getMasterPid();
         if (!$master_id) {
             $this->log("[warning] " . $this->_process_name . ": can not find master pid file");
