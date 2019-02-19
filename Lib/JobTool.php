@@ -285,7 +285,7 @@ trait JobTool
             var_dump($data);
             $info = json_decode($data, true);
             $cmd = $info['cmd'];
-            $server_name = $info['server'];
+            $server_name = $info['name'];
             // 不存在则启动
             $server_conf = self::getServerIni($server_name);
 
