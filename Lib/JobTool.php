@@ -251,7 +251,6 @@ trait JobTool
         $client->connect(UNIX_SOCK_PATH, 0, 10);
         $client->send(json_encode(['cmd' => $cmd, 'name' => $name]));
         $ret = $client->recv();
-        var_dump($ret);
         $ret = json_decode($ret, true);
         $client->close();
 
@@ -273,7 +272,8 @@ trait JobTool
         $sock_server->set([
             'worker_num' => 1,
             'daemonize' => 1,
-            'log_file' => '/data/wwwroot/xxl-job-swoole/Log/runtime.log'
+            'log_file' => '/data/wwwroot/xxl-job-swoole/Log/runtime.log',
+            'enable_coroutine' => false
         ]);
 
         $sock_server->on('connect', function() {
@@ -282,10 +282,9 @@ trait JobTool
 
         // 处理各种信号指令
         $sock_server->on('receive', function (Server $server, $fd, $from_id, $data) {
-            var_dump($data);
             $info = json_decode($data, true);
             $cmd = $info['cmd'];
-            $server_name = $info['name'];
+            $server_name = $info['server'];
             // 不存在则启动
             $server_conf = self::getServerIni($server_name);
 
@@ -312,7 +311,6 @@ trait JobTool
                     CmdProcess::execute($server_conf, 'stop');
                     $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name} stop" . " \033[32;40m [SUCCESS] \033[0m"]));
                     unset($server->running_servers[$server_name]);
-                    return;
                     break;
                 case 'shutdown':
                     CmdProcess::execute($server_conf, 'shutdown');

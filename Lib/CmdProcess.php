@@ -33,6 +33,18 @@ class CmdProcess
     }
 
     /**
+     * 发信号
+     * @param $conf_info
+     */
+    public static function sendSignal($conf_info, $cmd)
+    {
+        $client = new Client(SWOOLE_SOCK_TCP);
+        $client->connect($conf_info['server']['ip'], $conf_info['server']['port']);
+
+        return true;
+    }
+
+    /**
      * 杀掉进程
      *
      * @param $server_id
