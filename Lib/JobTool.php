@@ -272,7 +272,8 @@ trait JobTool
 
         $sock_server->set([
             'worker_num' => 1,
-            'daemonize' => 1
+            'daemonize' => 1,
+            'log_file' => '/data/wwwroot/xxl-job-swoole/Log/runtime.log'
         ]);
 
         $sock_server->on('connect', function() {
@@ -311,6 +312,7 @@ trait JobTool
                     CmdProcess::execute($server_conf, 'stop');
                     $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name} stop" . " \033[32;40m [SUCCESS] \033[0m"]));
                     unset($server->running_servers[$server_name]);
+                    return;
                     break;
                 case 'shutdown':
                     CmdProcess::execute($server_conf, 'shutdown');
