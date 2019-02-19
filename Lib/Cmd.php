@@ -36,7 +36,7 @@ class Cmd
         // 进程检测
         if (CmdProcess::processCheckExist()) {
             // reload stop restart
-            $return = self::sendCmdToSock($cmd, $name);
+            $return =  CmdProcess::execute($server_info['conf'], 'shutdown');;
 
             if ($cmd == 'shutdown') {
 
@@ -49,12 +49,12 @@ class Cmd
                 }
 
                 //获取status 之后去杀掉进程
-                if ($return['code'] == Code::SUCCESS_CODE) {
+                if ($return) {
                     //先杀掉所有的run server
-                    if (empty($return['data'])) {
-                        echo 'shutdown' . "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
-                        exit;
-                    }
+//                    if (empty($return['data'])) {
+//                        echo 'shutdown' . "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
+//                        exit;
+//                    }
 
                     $ret = system("  ps aux | grep " . SUPER_PROCESS_NAME . " | grep -v grep");
                     preg_match('/\d+/', $ret, $match);
