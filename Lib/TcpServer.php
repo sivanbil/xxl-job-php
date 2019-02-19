@@ -106,7 +106,7 @@ class TcpServer
         $this->server->on('managerStart', array($this, 'onManagerStart'));
 
 
-        if (isset($conf['setting']['task_worker_num'])) {
+        if (isset($this->conf['setting']['task_worker_num'])) {
             $this->server->on('Task', array($this, 'onTask'));
             $this->server->on('Finish', array($this, 'onFinish'));
         }
