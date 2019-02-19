@@ -286,8 +286,8 @@ trait JobTool
             $cmd = $info['cmd'];
             $server_name = $info['name'];
             // 不存在则启动
-            $server_conf = self::getServerIni($server_name);
-
+            $server_info = self::getServerIni($server_name);
+            $server_conf = $server_info['conf'];
             switch ($cmd) {
                 case 'start':
                     if (isset($serv->running_servers[$server_name])) {
@@ -295,7 +295,7 @@ trait JobTool
                         return;
                     }
 
-                    if ($server_conf['code'] != Code::SUCCESS_CODE) {
+                    if ($server_info['code'] != Code::SUCCESS_CODE) {
                         $server->send($fd, json_encode($server_conf));
                         return ;
                     }
