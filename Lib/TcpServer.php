@@ -107,12 +107,12 @@ class TcpServer
         file_put_contents($this->_manager_pid_file, $server->manager_pid);
         // 定时器去注册
         $server->tick($this->conf['xxljob']['registry_interval_ms'], function() {
-            $biz_center = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
             $time = self::convertSecondToMicroS();
-            if (empty($this->conf['xxljob']['disable_registry'])) {
-                $biz_center->disable_registry = $this->conf['xxljob']['disable_registry'];
+            if (!empty($this->conf['xxljob']['open_registry'])) {
+                $biz_center = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
+                $biz_center->open_registry = $this->conf['xxljob']['open_registry'];
+                $biz_center->registry($time, $this->conf['server']['app_name'], $this->conf['server']['ip'] . ':' . $this->conf['server']['port']);
             }
-            $biz_center->registry($time, $this->conf['server']['app_name'], $this->conf['server']['ip'] . ':' . $this->conf['server']['port']);
         });
     }
 

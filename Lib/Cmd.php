@@ -30,7 +30,7 @@ class Cmd
         $server_info = self::getServerIni($name);
 
         $biz_center = null;
-        if (empty($server_info['conf']['xxljob']['disable_registry'])) {
+        if (!empty($server_info['conf']['xxljob']['open_registry'])) {
             $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
         }
         // 进程检测
@@ -42,11 +42,11 @@ class Cmd
 
                 // 调度中心rpc实例化
                 $time = self::convertSecondToMicroS();
-                if ($biz_center && empty($server_info['conf']['xxljob']['disable_registry'])) {
-                    $biz_center->disable_registry = $server_info['conf']['xxljob']['disable_registry'];
+                if ($biz_center && !empty($server_info['conf']['xxljob']['open_registry'])) {
+                    $biz_center->open_registry = $server_info['conf']['xxljob']['open_registry'];
+                    // 先移除
+                    $biz_center->registryRemove($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
                 }
-                // 先移除
-                $biz_center->registryRemove($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
 
                 //获取status 之后去杀掉进程
                 if ($return['code'] == Code::SUCCESS_CODE) {
@@ -104,11 +104,11 @@ class Cmd
                     self::startServerSock($running_servers);
                     // 调度中心rpc实例化
                     $time = self::convertSecondToMicroS();
-                    if (empty($server_info['conf']['xxljob']['disable_registry'])) {
-                        $biz_center->disable_registry = $server_info['conf']['xxljob']['disable_registry'];
+                    if (empty($server_info['conf']['xxljob']['open_registry'])) {
+                        $biz_center->disable_registry = $server_info['conf']['xxljob']['open_registry'];
+                        // 第一次注册
+                        $biz_center->registry($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
                     }
-                    // 第一次注册
-                    $biz_center->registry($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
                 }
             } else {
                 if ($cmd == 'shutdown' || $cmd == 'status') {
