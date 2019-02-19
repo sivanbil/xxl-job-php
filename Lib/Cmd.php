@@ -38,7 +38,7 @@ class Cmd
             // reload stop restart
             $return = self::sendCmdToSock($cmd, $name);
 
-            if ($cmd == 'shutdown') {
+            if ($cmd == 'stop') {
 
                 // 调度中心rpc实例化
                 $time = self::convertSecondToMicroS();
@@ -123,7 +123,7 @@ class Cmd
     {
         return [
             'start', 'stop', 'reload', 'restart',
-            'shutdown', 'status', 'list'
+            'status', 'list'
         ];
     }
 

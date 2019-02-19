@@ -70,7 +70,7 @@ class TcpServer
                 $this->status();
                 break;
             default:
-                echo 'Usage:php swoole.php start | stop | reload | restart | status | help' . PHP_EOL;
+                echo 'Usage:php index.php start | stop | reload | restart | status | help' . PHP_EOL;
                 break;
         }
     }
