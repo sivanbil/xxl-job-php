@@ -6,7 +6,7 @@
  * Time: 12:45 PM
  */
 
-namespace Lib;
+namespace Lib\Core;
 
 
 class Table extends \Swoole\Table

@@ -4,12 +4,13 @@
  * @author sivan
  * @description 进程管理
  */
-namespace Lib;
+namespace Lib\Executor;
+
+use Lib\Core\Client;
+use Lib\Core\Process;
 
 class CmdProcess
 {
-    public static $mpid = 0;
-
     /**
      * @param $server_info
      * @return bool
@@ -21,8 +22,7 @@ class CmdProcess
             // 启动进程守护
             $worker->exec($conf_info['server']['php'], [SRC_PATH . "/index.php", json_encode($conf_info), $cmd]);
         }, false);
-        self::$mpid = $process->start();
-
+        $process->start();
         // 结束的子进程回收
         $wait_res = Process::wait();
         if ($wait_res['code']) {

@@ -5,7 +5,7 @@
  * Date: 2019/2/2
  * Time: 10:13 AM
  */
-namespace Lib;
+namespace Lib\Core;
 
 class ProcessPool extends \Swoole\Process\Pool
 {

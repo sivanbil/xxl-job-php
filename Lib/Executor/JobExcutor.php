@@ -6,11 +6,17 @@
  * Time: 3:57 PM
  */
 
-namespace Lib;
+namespace Lib\Executor;
 
+use Lib\Core\Table;
 
-class JobExcutor
+class JobExecutor
 {
+    /**
+     * @param $job_id
+     * @param Table $table
+     * @return array|bool|string
+     */
     public static function loadJob($job_id, Table $table)
     {
 
@@ -18,6 +24,11 @@ class JobExcutor
     }
 
 
+    /**
+     * @param $job_id
+     * @param Table $table
+     * @return array|bool|string
+     */
     public static function removeJob($job_id, Table $table)
     {
         return $table->get($job_id);

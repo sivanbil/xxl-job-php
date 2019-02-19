@@ -6,7 +6,7 @@
  * Time: 2:21 PM
  */
 
-namespace Lib;
+namespace Lib\Core;
 
 class Server extends \Swoole\Server
 {

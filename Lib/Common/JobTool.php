@@ -5,7 +5,11 @@
  * @author sivan
  * @description tools
  */
-namespace Lib;
+namespace Lib\Common;
+
+use Lib\Executor\CmdProcess;
+use Lib\Core\Client;
+use Lib\Core\Server;
 
 trait JobTool
 {

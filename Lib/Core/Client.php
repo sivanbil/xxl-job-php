@@ -6,7 +6,7 @@
  * Time: 1:50 PM
  */
 
-namespace Lib;
+namespace Lib\Core;
 
 
 class Client extends \Swoole\Client

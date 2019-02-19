@@ -5,7 +5,10 @@
  * @author sivan
  * @description job strategy
  */
-namespace Lib;
+namespace Lib\Executor;
+
+use Lib\Core\Process;
+use Lib\Core\Table;
 
 class JobStrategy
 {
@@ -55,6 +58,10 @@ class JobStrategy
         );
     }
 
+    /**
+     * @param $data
+     * @return false|string
+     */
     public static function discard($data)
     {
 
@@ -64,11 +71,6 @@ class JobStrategy
                 'log_id' => $data['logId'],
                 'log_date_time' => $data['logDateTim']]
         );
-    }
-
-    public static function next()
-    {
-
     }
 }
 

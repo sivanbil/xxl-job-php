@@ -6,7 +6,7 @@
  * Date: 2019/2/12
  * Time: 6:22 PM
  */
-namespace Lib;
+namespace Lib\Common;
 
 class Code
 {

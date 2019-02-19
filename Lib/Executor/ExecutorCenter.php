@@ -5,7 +5,12 @@
  * Date: 2019/2/1
  * Time: 7:10 PM
  */
-namespace Lib;
+namespace Lib\Executor;
+
+use Lib\Common\Code;
+use Lib\Common\JobTool;
+use Lib\Core\Server;
+use Lib\Core\Table;
 
 class ExecutorCenter
 {
@@ -33,7 +38,7 @@ class ExecutorCenter
     {
         $is_running_or_has_queue = false;
 
-        $job_status = JobExcutor::loadJob($job_id, $table);
+        $job_status = JobExecutor::loadJob($job_id, $table);
 
         if ($job_status) {
             $is_running_or_has_queue = true;
@@ -73,13 +78,13 @@ class ExecutorCenter
      */
     public static function kill($job_id, Table $table)
     {
-        $job_info = JobExcutor::loadJob($job_id, $table);
+        $job_info = JobExecutor::loadJob($job_id, $table);
         $code = Code::SUCCESS_CODE;
         // 内存表里还有key
         if ($job_info) {
             $process_name = $job_info['process_name'];
             if (self::killScriptProcess($process_name)) {
-                JobExcutor::removeJob($job_id, $table);
+                JobExecutor::removeJob($job_id, $table);
             } else {
                 $code = Code::ERROR_CODE;
             }

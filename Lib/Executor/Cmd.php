@@ -6,7 +6,10 @@
  * Date: 2019/2/1
  * Time: 11:08 AM
  */
-namespace Lib;
+namespace Lib\Executor;
+
+use Lib\Common\Code;
+use Lib\Common\JobTool;
 
 class Cmd
 {
