@@ -103,7 +103,7 @@ class TcpServer
      */
     protected function _initServer()
     {
-        $this->server = new Server($this->conf['server']['ip'], $this->conf['server']['port']);
+        $this->server = new Server($this->conf['server']['host'], $this->conf['server']['port']);
         if (!empty($this->conf['server']['process_name'])) {
             $this->_process_name = $this->conf['server']['process_name'];
         }
