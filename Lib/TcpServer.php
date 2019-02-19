@@ -87,12 +87,12 @@ class TcpServer
         unlink($this->_master_pid_file);
         unlink($this->_manager_pid_file);
 
-        $masterId = $this->getMasterPid();
-        if (!$masterId) {
+        $master_id = $this->getMasterPid();
+        if (!$master_id) {
             $this->log("[warning] " . $this->_process_name . ": can not find master pid file");
             $this->log($this->_process_name . ": stop\033[31;40m [FAIL] \033[0m");
             return false;
-        } elseif (!posix_kill($masterId, 15)) {
+        } elseif (!posix_kill($master_id, 15)) {
             $this->log("[warning] " . $this->_process_name . ": send signal to master failed");
             $this->log($this->_process_name . ": stop\033[31;40m [FAIL] \033[0m");
             return false;

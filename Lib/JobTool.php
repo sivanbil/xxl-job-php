@@ -317,7 +317,7 @@ trait JobTool
                     break;
                 case 'reload':
                     CmdProcess::execute($server_conf, $cmd);
-                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name}  reload " . " \033[32;40m [SUCCESS] \033[0m"]));
+                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers, 'msg' => "server {$server_name}  reload " . " \033[32;40m [SUCCESS] \033[0m"]));
                     return;
                     break;
                 case 'restart':
