@@ -277,12 +277,10 @@ trait JobTool
         ]);
 
         $sock_server->on('connect', function() {
-            echo 111;
         });
 
         // 处理各种信号指令
         $sock_server->on('receive', function (Server $server, $fd, $from_id, $data) {
-            echo 222;
             $info = json_decode($data, true);
             $cmd = $info['cmd'];
             $server_name = $info['name'];

@@ -32,21 +32,72 @@ class TcpServer
 
     protected $_run_path = '/tmp';
 
+    protected $_setting = [];
+
 
     /**
      * TcpServer constructor.
      * @param $conf
      */
     public function __construct($conf) {
-
         $this->conf = $conf;
+    }
 
-        $this->server = new Server($conf['server']['ip'], $conf['server']['port']);
-        $this->server->set($conf['setting']);
-        if (!empty($conf['server']['process_name'])) {
-            $this->_process_name = $conf['server']['process_name'];
+
+    /**
+     * @param array $setting
+     */
+    public function run($cmd) {
+        $this->_initRunTime();
+        switch ($cmd) {
+            case 'stop':
+                $this->shutdown();
+                break;
+            case 'start':
+                $this->_initServer();
+                $this->start();
+                break;
+            case 'reload':
+                $this->reload();
+                break;
+            case 'restart':
+                $this->shutdown();
+                sleep(2);
+                $this->_initServer();
+                $this->start();
+                break;
+            case 'status':
+                $this->status();
+                break;
+            default:
+                echo 'Usage:php swoole.php start | stop | reload | restart | status | help' . PHP_EOL;
+                break;
         }
+    }
 
+    /**
+     * 初始化server运行时资源
+     */
+    protected function _initRuntime()
+    {
+        $this->_master_pid_file = $this->_run_path . '/' . $this->_process_name . '.master.pid';
+        $this->_manager_pid_file = $this->_run_path . '/' . $this->_process_name . '.manager.pid';
+        // table
+        $this->table = new Table($this->conf['table']['size']);
+        $this->table->column('task_id', Table::TYPE_INT);
+        $this->table->column('process_name', Table::TYPE_STRING, 100);
+        $this->table->create();
+    }
+    /**
+     * 初始化server
+     */
+    protected function _initServer()
+    {
+        $this->server = new Server($this->conf['server']['ip'], $this->conf['server']['port']);
+        if (!empty($this->conf['server']['process_name'])) {
+            $this->_process_name = $this->conf['server']['process_name'];
+        }
+        $this->server->set($this->conf['setting']);
         // 注册回调事件
         $this->server->on('start',   [$this, 'onStart']);
         $this->server->on('connect', [$this, 'onConnect']);
@@ -59,17 +110,7 @@ class TcpServer
             $this->server->on('Task', array($this, 'onTask'));
             $this->server->on('Finish', array($this, 'onFinish'));
         }
-        $this->_master_pid_file = $this->_run_path . '/' . $this->_process_name . '.master.pid';
-        $this->_manager_pid_file = $this->_run_path . '/' . $this->_process_name . '.manager.pid';
-
-        $this->table = new Table($this->conf['table']['size']);
-        $this->table->column('task_id', Table::TYPE_INT);
-        $this->table->column('process_name', Table::TYPE_STRING, 100);
-        $this->table->create();
     }
-
-
-
     /**
      * 启动
      */
