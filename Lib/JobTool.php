@@ -250,6 +250,7 @@ trait JobTool
         $client->connect(UNIX_SOCK_PATH, 0, 10);
         $client->send(json_encode(['cmd' => $cmd, 'name' => $name]));
         $ret = $client->recv();
+        var_dump($ret);
         $ret = json_decode($ret, true);
         $client->close();
 
@@ -276,11 +277,12 @@ trait JobTool
         ]);
 
         $sock_server->on('connect', function() {
-
+            echo 111;
         });
 
         // 处理各种信号指令
         $sock_server->on('receive', function (Server $server, $fd, $from_id, $data) {
+            echo 222;
             $info = json_decode($data, true);
             $cmd = $info['cmd'];
             $server_name = $info['name'];
@@ -312,16 +314,16 @@ trait JobTool
                     unset($server->running_servers[$server_name]);
                     break;
                 case 'shutdown':
+                    var_dump($server_conf);
                     CmdProcess::execute($server_conf, 'shutdown');
                     $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers, 'msg' => "server {$server_name} shutdown" . " \033[32;40m [SUCCESS] \033[0m"]));
                     //清除所有的runServer序列
                     unset($server->running_servers);
-                    break;
+                    return ;
                 case 'reload':
                     CmdProcess::execute($server_conf, $cmd);
                     $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers, 'msg' => "server {$server_name}  reload " . " \033[32;40m [SUCCESS] \033[0m"]));
                     return;
-                    break;
                 case 'restart':
                     //首先unset 防止被自动拉起，然后停止，然后sleep 然后start
                     unset($server->running_servers[$server_name]);//从runserver中干掉
@@ -331,17 +333,16 @@ trait JobTool
                     $server->running_servers[$server_name] = ['server_info' => $server_conf, 'name' => $server_name]; //添加到runServer中
                     $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name} restart  \033[32;40m [SUCCESS] \033[0m"]));
                     return;
-                    break;
                 case 'status':
                 default:
                     $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers]));
                     break;
             }
-
         });
 
         $sock_server->start();
     }
+
 
     /**
      * @return int
