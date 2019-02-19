@@ -19,7 +19,7 @@ class BizCenter
     public function __construct($host = '127.0.0.1', $port = '8987')
     {
 
-        $this->client = new \swoole_client(SWOOLE_SOCK_TCP);
+        $this->client = new Client(SWOOLE_SOCK_TCP);
         $this->client->connect($host, $port, -1);
     }
 
