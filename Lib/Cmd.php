@@ -86,7 +86,7 @@ class Cmd
                     } else {
                         echo SUPER_PROCESS_NAME . ' is ' . "\033[32;40m [RUNNING] \033[0m" . PHP_EOL;
                         foreach ($return['data'] as $single) {
-                            echo 'Server Name is ' . "\033[32;40m " . $single['name'] . " \033[0m" . '  ' . 'and php start path is ' . $single['php'] . PHP_EOL;
+                            echo 'Server Name is ' . "\033[32;40m " . $single['name'] . " \033[0m" . '  '  . PHP_EOL;
                         }
                     }
                 } else {
