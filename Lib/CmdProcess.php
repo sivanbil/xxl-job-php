@@ -17,9 +17,9 @@ class CmdProcess
     public static function execute($conf_info, $cmd = 'start')
     {
         // 创建并启动进程
-        $process = new Process(function (Process $worker) use ($conf_info) {
+        $process = new Process(function (Process $worker) use ($conf_info, $cmd) {
             // 启动进程守护
-            $worker->exec($conf_info['server']['php'], [SRC_PATH . "/index.php", json_encode($conf_info)]);
+            $worker->exec($conf_info['server']['php'], [SRC_PATH . "/index.php", json_encode($conf_info), $cmd]);
         }, false);
         self::$mpid = $process->start();
 

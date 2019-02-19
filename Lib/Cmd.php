@@ -29,8 +29,10 @@ class Cmd
     {
         $server_info = self::getServerIni($name);
 
-        $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
-
+        $biz_center = null;
+        if (empty($server_info['conf']['xxljob']['disable_registry'])) {
+            $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
+        }
         // 进程检测
         if (CmdProcess::processCheckExist()) {
             // reload stop restart
@@ -40,13 +42,12 @@ class Cmd
 
                 // 调度中心rpc实例化
                 $time = self::convertSecondToMicroS();
-                if (empty($server_info['conf']['xxljob']['disable_registry'])) {
+                if ($biz_center && empty($server_info['conf']['xxljob']['disable_registry'])) {
                     $biz_center->disable_registry = $server_info['conf']['xxljob']['disable_registry'];
                 }
                 // 先移除
                 $biz_center->registryRemove($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
 
-                // 先移除
                 //获取status 之后去杀掉进程
                 if ($return['code'] == Code::SUCCESS_CODE) {
                     //先杀掉所有的run server
@@ -98,7 +99,7 @@ class Cmd
         } else {
             if ($cmd == 'start') {
                 // 启动完毕后
-                if (CmdProcess::execute($server_info['conf'])) {
+                if (CmdProcess::execute($server_info['conf'], $cmd)) {
                     $running_servers[$name] = ['server_info' => $server_info, 'name' => $name];
                     self::startServerSock($running_servers);
                     // 调度中心rpc实例化
