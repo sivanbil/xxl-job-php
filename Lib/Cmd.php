@@ -51,6 +51,10 @@ class Cmd
                 //获取status 之后去杀掉进程
                 if ($return['code'] == Code::SUCCESS_CODE) {
                     //先杀掉所有的run server
+                    if (empty($return['data'])) {
+                        echo 'shutdown' . "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
+                        exit;
+                    }
                     foreach ($return['data'] as $server) {
                         // array('php'=>,'name'=)
                         $ret = system("ps aux | grep " . $server['name'] . " | grep master | grep -v grep ");
