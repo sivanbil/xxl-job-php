@@ -250,7 +250,6 @@ trait JobTool
         $client->connect(UNIX_SOCK_PATH, 0, 10);
         $client->send(json_encode(['cmd' => $cmd, 'name' => $name]));
         $ret = $client->recv();
-        var_dump($ret);
         $ret = json_decode($ret, true);
         $client->close();
 
