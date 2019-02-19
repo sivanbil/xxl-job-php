@@ -25,6 +25,8 @@ spl_autoload_register('\\Lib\\Loader::autoload');
 
 $conf = json_decode($argv[1], true);
 $cmd = $argv[2];
+
+var_dump(['====', $cmd, 'srcserver']);
 // init executor server
 $server = new \Lib\TcpServer($conf);
 
