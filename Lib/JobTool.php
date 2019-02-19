@@ -308,16 +308,9 @@ trait JobTool
                     break;
                 case 'stop':
                     CmdProcess::execute($server_conf, 'stop');
-                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name} stop" . " \033[32;40m [SUCCESS] \033[0m"]));
+                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers, 'msg' => "server {$server_name} stop" . " \033[32;40m [SUCCESS] \033[0m"]));
                     unset($server->running_servers[$server_name]);
                     break;
-                case 'shutdown':
-                    var_dump($server_conf);
-                    CmdProcess::execute($server_conf, 'shutdown');
-                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers, 'msg' => "server {$server_name} shutdown" . " \033[32;40m [SUCCESS] \033[0m"]));
-                    //清除所有的runServer序列
-                    unset($server->running_servers);
-                    return ;
                 case 'reload':
                     CmdProcess::execute($server_conf, $cmd);
                     $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers, 'msg' => "server {$server_name}  reload " . " \033[32;40m [SUCCESS] \033[0m"]));
