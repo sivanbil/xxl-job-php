@@ -34,6 +34,10 @@ if ($cmd == 'start') {
     $server->start();
 }
 
-if ($cmd == 'shutdown') {
+if ($cmd == 'shutdown' || $cmd == 'stop') {
     $server->shutdown();
+}
+
+if ($cmd == 'reload') {
+    $server->reload();
 }
