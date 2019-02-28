@@ -12,15 +12,16 @@ use Lib\Core\Process;
 class CmdProcess
 {
     /**
-     * @param $server_info
+     * @param $confInfo
+     * @param string $cmd
      * @return bool
      */
-    public static function execute($conf_info, $cmd = 'start')
+    public static function execute($confInfo, $cmd = 'start')
     {
         // 创建并启动进程
-        $process = new Process(function (Process $worker) use ($conf_info, $cmd) {
+        $process = new Process(function (Process $worker) use ($confInfo, $cmd) {
             // 启动进程守护
-            $worker->exec($conf_info['server']['php'], [SRC_PATH . "/index.php", json_encode($conf_info), $cmd]);
+            $worker->exec($confInfo['server']['php'], [SRC_PATH . "/index.php", json_encode($confInfo), $cmd]);
         }, false);
         $process->start();
         // 结束的子进程回收
@@ -34,7 +35,10 @@ class CmdProcess
 
     /**
      * 发信号
+     *
      * @param $conf_info
+     * @param $cmd
+     * @return bool
      */
     public static function sendSignal($conf_info, $cmd)
     {
@@ -47,13 +51,13 @@ class CmdProcess
     /**
      * 杀掉进程
      *
-     * @param $server_id
+     * @param $serverId
      * @param int $n
      * @return bool
      */
-    public static function kill($server_id, $n = 15)
+    public static function kill($serverId, $n = 15)
     {
-        if (posix_kill($server_id, $n)) {
+        if (posix_kill($serverId, $n)) {
             return true;
         }
 

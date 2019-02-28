@@ -20,27 +20,28 @@ use Lib\Executor\JobStrategy;
 class TcpServer
 {
     use JobTool;
-    /**
-     * @var
-     */
+    // server 实例
     public $server;
 
-    /**
-     * @var
-     */
+    // 配置信息
     public $conf;
 
+    // 内存table实例
     public $table;
+    // manager pid 文件路径
+    protected $managerPidFile;
 
-    protected $_manager_pid_file;
+    // master id 文件路径
+    protected $masterPidFile;
 
-    protected $_master_pid_file;
+    // tcp server process name
+    protected $processName = 'php-executor-server';
 
-    protected $_process_name = 'php-executor-server';
+    // 存储文件临时地址
+    protected $runPath = '/tmp';
 
-    protected $_run_path = '/tmp';
-
-    protected $_setting = [];
+    // server setting 信息
+    protected $setting = [];
 
 
     /**
@@ -56,13 +57,16 @@ class TcpServer
      * @param array $setting
      */
     public function run($cmd) {
-        $this->_initRunTime();
+        // 初始化运行时信息
+        $this->initRunTime();
+
+        // 根据命令执行不同的运行策略
         switch ($cmd) {
             case 'stop':
                 $this->shutdown();
                 break;
             case 'start':
-                $this->_initServer();
+                $this->initServer();
                 $this->start();
                 break;
             case 'reload':
@@ -71,7 +75,7 @@ class TcpServer
             case 'restart':
                 $this->shutdown();
                 sleep(2);
-                $this->_initServer();
+                $this->initServer();
                 $this->start();
                 break;
             case 'status':
@@ -84,75 +88,28 @@ class TcpServer
     }
 
     /**
-     * 初始化server运行时资源
+     * @param Server $server
      */
-    protected function _initRuntime()
-    {
-        $this->_setting = $this->conf['setting'];
-
-        $this->_master_pid_file = $this->_run_path . '/' . $this->_process_name . '.master.pid';
-        $this->_manager_pid_file = $this->_run_path . '/' . $this->_process_name . '.manager.pid';
-        // table
-        $this->table = new Table($this->conf['table']['size']);
-        $this->table->column('task_id', Table::TYPE_INT);
-        $this->table->column('process_name', Table::TYPE_STRING, 100);
-        $this->table->create();
-    }
-    /**
-     * 初始化server
-     */
-    protected function _initServer()
-    {
-        $this->server = new Server($this->conf['server']['host'], $this->conf['server']['port']);
-        if (!empty($this->conf['server']['process_name'])) {
-            $this->_process_name = $this->conf['server']['process_name'];
-        }
-        $this->server->set($this->conf['setting']);
-        // 注册回调事件
-        $this->server->on('start',   [$this, 'onStart']);
-        $this->server->on('connect', [$this, 'onConnect']);
-        $this->server->on('receive', [$this, 'onReceive']);
-        $this->server->on('close',   [$this, 'onClose']);
-        $this->server->on('managerStart', array($this, 'onManagerStart'));
-
-
-        if (isset($this->conf['setting']['task_worker_num'])) {
-            $this->server->on('Task', array($this, 'onTask'));
-            $this->server->on('Finish', array($this, 'onFinish'));
-        }
-    }
-    /**
-     * 启动
-     */
-    public function start()
-    {
-        $this->server->start();
-    }
-
-    /**
-     * 关闭
-     */
-    public function shutdown()
-    {
-        $master_id = $this->getMasterPid();
-        if (!$master_id) {
-            $this->log("[warning] " . $this->_process_name . ": can not find master pid file");
-            $this->log($this->_process_name . ": stop\033[31;40m [FAIL] \033[0m");
-            return false;
-        } elseif (!posix_kill($master_id, 15)) {
-            $this->log("[warning] " . $this->_process_name . ": send signal to master failed");
-            $this->log($this->_process_name . ": stop\033[31;40m [FAIL] \033[0m");
-            return false;
-        }
-        unlink($this->_master_pid_file);
-        unlink($this->_manager_pid_file);
-        return true;
-    }
-
     public function onManagerStart(Server $server)
     {
         // rename manager process
-        self::setProcessNameProperty($this->_process_name . ': manager process');
+        self::setProcessNameProperty($this->processName . ': manager process');
+    }
+
+    /**
+     * @param Server $server
+     */
+    public function onWorkerStart(Server $server)
+    {
+        // 定时器去注册
+        $server->tick($this->conf['xxljob']['registry_interval_ms'], function() {
+            $time = self::convertSecondToMicroS();
+            if (!empty($this->conf['xxljob']['open_registry'])) {
+                $bizCenter = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
+                $bizCenter->openRegistry = $this->conf['xxljob']['open_registry'];
+                $bizCenter->registry($time, $this->conf['server']['app_name'], $this->conf['server']['host'] . ':' . $this->conf['server']['port']);
+            }
+        });
     }
 
     /**
@@ -162,47 +119,38 @@ class TcpServer
      */
     public function onStart(Server $server )
     {
-        self::setProcessNameProperty($this->_process_name . ': master process');
+        self::setProcessNameProperty($this->processName . ': master process');
 
-        file_put_contents($this->_master_pid_file, $server->master_pid);
-        file_put_contents($this->_manager_pid_file, $server->manager_pid);
-        // 定时器去注册
-        $server->tick($this->conf['xxljob']['registry_interval_ms'], function() {
-            $time = self::convertSecondToMicroS();
-            if (!empty($this->conf['xxljob']['open_registry'])) {
-                $biz_center = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
-                $biz_center->open_registry = $this->conf['xxljob']['open_registry'];
-                $biz_center->registry($time, $this->conf['server']['app_name'], $this->conf['server']['ip'] . ':' . $this->conf['server']['port']);
-            }
-        });
+        file_put_contents($this->masterPidFile, $server->master_pid);
+        file_put_contents($this->managerPidFile, $server->manager_pid);
     }
 
     /**
-     * @param $server
+     * @param Server $server
      * @param $fd
-     * @param $from_id
+     * @param $fromId
      */
-    public function onConnect(Server $server, $fd, $from_id )
+    public function onConnect(Server $server, $fd, $fromId )
     {
     }
 
     /**
-     * @param  $server
+     * @param Server $server
      * @param $fd
-     * @param $from_id
+     * @param $fromId
      * @param $data
      */
-    public function onReceive( Server $server, $fd, $from_id, $data )
+    public function onReceive( Server $server, $fd, $fromId, $data )
     {
 
         // 解包通信数据
         $req = self::unpackData($data);
 
         $parameters = $req['parameters'];
-        $invoke_name = $req['methodName'];
+        $invokeName = $req['methodName'];
 
         // 根据调用不同方法
-        switch ($invoke_name) {
+        switch ($invokeName) {
             case 'run':
                 // 任务处理
                 ExecutorCenter::run($parameters, $req['requestId'], $server);
@@ -231,11 +179,11 @@ class TcpServer
     }
 
     /**
-     * @param $server
+     * @param Server $server
      * @param $fd
-     * @param $from_id
+     * @param $fromId
      */
-    public function onClose( Server $server, $fd, $from_id )
+    public function onClose( Server $server, $fd, $fromId )
     {
 
     }
@@ -246,15 +194,15 @@ class TcpServer
      * @param $fromId
      * @param $data
      */
-    public function onTask(Server $server, $task_id, $from_id, $data)
+    public function onTask(Server $server, $taskId, $fromId, $data)
     {
         $params = self::getHandlerParams($data, $this->conf);
         // 设置到swoole_table里
-        $process_name = implode(' ', $params);
+        $processName = 'task_' . $data['jobId'];
 
         $exist = true;
         if (!$this->table->get($data['jobId'])) {
-            $this->table->set($data['jobId'], ['task_id' => $task_id, 'process_name' => $process_name]);
+            $this->table->set($data['jobId'], ['task_id' => $taskId, 'log_id' => $data['logId'], 'process_name' => $processName]);
             $exist = false;
         }
 
@@ -267,12 +215,12 @@ class TcpServer
         // 丢弃之前的使用新的
         if ($exist && $data['executorBlockStrategy'] == JobStrategy::USE_NEXT_SCHEDULING) {
             self::appendLog($data['logDateTim'], $data['logId'], '上一个task因策略需要被丢弃：' . json_encode($params));
-            self::killScriptProcess($process_name);
+            self::killScriptProcess($processName);
         }
 
         self::appendLog($data['logDateTim'], $data['logId'], '执行task参数：' . json_encode($params));
         // 按照队列执行
-        return JobStrategy::serial($data, $process_name, $params, $this->table);
+        return JobStrategy::serial($data, $this->conf['server'], $params, $this->table);
     }
 
     /**
@@ -282,23 +230,34 @@ class TcpServer
      * @param $taskId
      * @param $data
      */
-    public function onFinish(Server $server, $task_id, $data)
+    public function onFinish(Server $server, $taskId, $data)
     {
         $data = json_decode($data, true);
+
         $this->table->del($data['job_id']);
 
-        $biz_center = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
+        $bizCenter = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
         $time = self::convertSecondToMicroS();
-        $log_id = $data['log_id'];
-        $log_time = $data['log_date_time'];
-        $request_id = $data['request_id'];
+        $logId = $data['log_id'];
+        $logTime = $data['log_date_time'];
+        $requestId = $data['request_id'];
 
-        $execute_result = [
-            'code' => 200,
-            'msg'  => '脚本执行完成，结束脚本运行'
+        $executeResult = [
+            'code' => Code::SUCCESS_CODE,
+            'msg'  => '脚本执行完成，结束脚本运行',
         ];
+        if (isset($data['exec_result_msg']) && $data['exec_result_msg']) {
+            $searchResult = stripos(strtolower($data['exec_result_msg']), 'success');
+            // 没找到则执行有问题
+            if (is_bool($searchResult)) {
+                $executeResult['code'] = Code::ERROR_CODE;
+            }
+            $executeResult['content'] =  $data['exec_result_msg'];
+            // 追加执行结果
+            self::appendLog($data['log_date_time'], $data['log_id'], '脚本执行结果:' . $data['exec_result_msg']);
+        }
         // 结果回调
-        $result = $biz_center->callback($time, $log_id, $request_id, $log_time, $execute_result);
+        $result = $bizCenter->callback($time, $logId, $requestId, $logTime, $executeResult);
 
         $msg = Code::SUCCESS_CODE;
         if ($result) {
@@ -312,25 +271,88 @@ class TcpServer
     /**
      * @return bool
      */
-    public function reload()
+    protected function reload()
     {
-        $manager_id = $this->getManagerPid();
-        if (!$manager_id) {
+        $managerId = $this->getManagerPid();
+        if (!$managerId) {
             return false;
-        } elseif (!posix_kill($manager_id, 10)) {
+        } elseif (!posix_kill($managerId, 10)) {
             return false;
         }
         return true;
     }
 
     /**
+     * @param $processName
+     */
+    public function setProcessNameProperty($processName)
+    {
+        $this->processName = $processName;
+
+        self::setProcessName($processName);
+    }
+
+    /**
+     * @param $msg
+     */
+    public function log($msg)
+    {
+        if (isset($this->setting['log_file']) && file_exists($this->setting['log_file'])) {
+            error_log($msg . PHP_EOL, 3, $this->setting['log_file']);
+        }
+        echo $msg . PHP_EOL;
+    }
+
+    /**
+     * 初始化server运行时资源
+     */
+    protected function initRuntime()
+    {
+        $this->setting = $this->conf['setting'];
+
+        $this->masterPidFile = $this->runPath . '/' . $this->processName . '.master.pid';
+        $this->managerPidFile = $this->runPath . '/' . $this->processName . '.manager.pid';
+        // table
+        $this->table = new Table($this->conf['table']['size']);
+        $this->table->column('task_id', Table::TYPE_INT);
+        $this->table->column('process_name', Table::TYPE_STRING, 100);
+        $this->table->create();
+    }
+
+    /**
+     * 初始化server
+     */
+    protected function initServer()
+    {
+        $this->server = new Server($this->conf['server']['host'], $this->conf['server']['port']);
+        if (!empty($this->conf['server']['process_name'])) {
+            $this->processName = $this->conf['server']['process_name'];
+        }
+        $this->server->set($this->conf['setting']);
+        // 注册回调事件
+        $this->server->on('start',   [$this, 'onStart']);
+        $this->server->on('connect', [$this, 'onConnect']);
+        $this->server->on('receive', [$this, 'onReceive']);
+        $this->server->on('close',   [$this, 'onClose']);
+        $this->server->on('managerStart', array($this, 'onManagerStart'));
+
+        if (isset($this->conf['setting']['worker_num'])) {
+            $this->server->on('workerStart', array($this, 'onWorkerStart'));
+        }
+
+        if (isset($this->conf['setting']['task_worker_num'])) {
+            $this->server->on('Task', array($this, 'onTask'));
+            $this->server->on('Finish', array($this, 'onFinish'));
+        }
+    }
+    /**
      * @return bool|string
      */
     protected function getManagerPid()
     {
         $pid = false;
-        if (file_exists($this->_manager_pid_file)) {
-            $pid = file_get_contents($this->_manager_pid_file);
+        if (file_exists($this->managerPidFile)) {
+            $pid = file_get_contents($this->managerPidFile);
         }
         return $pid;
     }
@@ -341,10 +363,38 @@ class TcpServer
     protected function getMasterPid()
     {
         $pid = false;
-        if (file_exists($this->_master_pid_file)) {
-            $pid = file_get_contents($this->_master_pid_file);
+        if (file_exists($this->masterPidFile)) {
+            $pid = file_get_contents($this->masterPidFile);
         }
         return $pid;
+    }
+
+    /**
+     * 启动
+     */
+    protected function start()
+    {
+        $this->server->start();
+    }
+
+    /**
+     * 关闭
+     */
+    protected function shutdown()
+    {
+        $masterId = $this->getMasterPid();
+        if (!$masterId) {
+            $this->log("[warning] " . $this->processName . ": can not find master pid file");
+            $this->log($this->processName . ": stop\033[31;40m [FAIL] \033[0m");
+            return false;
+        } elseif (!posix_kill($masterId, 15)) {
+            $this->log("[warning] " . $this->processName . ": send signal to master failed");
+            $this->log($this->processName . ": stop\033[31;40m [FAIL] \033[0m");
+            return false;
+        }
+        unlink($this->masterPidFile);
+        unlink($this->managerPidFile);
+        return true;
     }
 
     /**
@@ -356,11 +406,11 @@ class TcpServer
         $this->log("Summary: ");
         $this->log("Swoole Version: " . SWOOLE_VERSION);
         if (!$this->checkServerIsRunning()) {
-            $this->log($this->_process_name . ": is running \033[31;40m [FAIL] \033[0m");
+            $this->log($this->processName . ": is running \033[31;40m [FAIL] \033[0m");
             $this->log("*****************************************************************");
             return false;
         }
-        $this->log($this->_process_name . ": is running \033[31;40m [OK] \033[0m");
+        $this->log($this->processName . ": is running \033[31;40m [OK] \033[0m");
         $this->log("master pid : is " . $this->getMasterPid());
         $this->log("manager pid : is " . $this->getManagerPid());
         $this->log("*****************************************************************");
@@ -382,26 +432,5 @@ class TcpServer
     protected function checkPidIsRunning($pid)
     {
         return posix_kill($pid, 0);
-    }
-
-    /**
-     * @param $process_name
-     */
-    public function setProcessNameProperty($process_name)
-    {
-        $this->_process_name = $process_name;
-
-        self::setProcessName($process_name);
-    }
-
-    /**
-     * @param $msg
-     */
-    public function log($msg)
-    {
-        if (isset($this->_setting['log_file']) && file_exists($this->_setting['log_file'])) {
-            error_log($msg . PHP_EOL, 3, $this->_setting['log_file']);
-        }
-        echo $msg . PHP_EOL;
     }
 }

@@ -21,27 +21,31 @@ class JobStrategy
 
     /**
      * @param $data
-     * @param $process_name
-     * @param $table
+     * @param $processName
+     * @param $params
+     * @param Table $table
      * @return false|string
      */
-    public static function serial($data, $process_name, $params, Table $table)
+    public static function serial($data, $serverInfo, $params, Table $table)
     {
         // 然后执行脚本
-        $process = new Process(function (Process $worker) use ($data, $process_name, $params, $table) {
+        $process = new Process(function (Process $worker) use ($data, $serverInfo, $params, $table) {
             while ($msg = $worker->pop()) {
                 if ($msg === false) {
-                    break;
+                    continue;
                 }
-                if ($table->get($data['jobId'])) {
+                $existInfo = $table->get($data['jobId']);
+                if ($existInfo && !empty($existInfo['logId']) && $existInfo['logId'] != $data['logId']) {
                     $worker->push($msg);
-                    break;
+                    continue;
                 }
                 // 丢弃之后的
                 $params = json_decode($msg, true);
-                $worker->exec($this->conf['server']['php'], $params);
+                $worker->exec($serverInfo['php'], $params);
+                $worker->write('success');
             }
-        }, false);
+
+        }, true);
         $process->useQueue(1, 2);
         $process->start();
         $process->push(json_encode($params));
@@ -50,12 +54,14 @@ class JobStrategy
             echo  "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
             exit;
         }
+        $execResultMsg = $process->read();
         return json_encode([
                 'job_id' => $data['jobId'],
                 'request_id' => $data['requestId'],
                 'log_id' => $data['logId'],
-                'log_date_time' => $data['logDateTim']]
-        );
+                'log_date_time' => $data['logDateTim'],
+                'exec_result_msg' => $execResultMsg
+        ]);
     }
 
     /**

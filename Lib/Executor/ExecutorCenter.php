@@ -31,20 +31,21 @@ class ExecutorCenter
     /**
      * 闲时检测
      *
-     * @param $job_id
+     * @param $jobId
+     * @param Table $table
      * @return array
      */
-    public static function idleBeat($job_id, Table $table)
+    public static function idleBeat($jobId, Table $table)
     {
-        $is_running_or_has_queue = false;
+        $isRunningOrHasQueue = false;
 
-        $job_status = JobExecutor::loadJob($job_id, $table);
+        $jobStatus = JobExecutor::loadJob($jobId, $table);
 
-        if ($job_status) {
-            $is_running_or_has_queue = true;
+        if ($jobStatus) {
+            $isRunningOrHasQueue = true;
         }
 
-        if ($is_running_or_has_queue) {
+        if ($isRunningOrHasQueue) {
             return ['code' => Code::ERROR_CODE, 'msg' => 'job thread is running or has trigger queue.'];
         }
 
@@ -59,32 +60,33 @@ class ExecutorCenter
      * @param $from_line_num
      * @return array
      */
-    public static function log($log_time, $job_id, $from_line_num)
+    public static function log($logTime, $jobId, $fromLineNum)
     {
 
-        $log_file_name = JobTool::makeLogFileName($log_time, $job_id);
+        $logFileName = JobTool::makeLogFileName($logTime, $jobId);
 
-        $log_content = JobTool::readLog($log_file_name, $from_line_num);
+        $logContent = JobTool::readLog($logFileName, $fromLineNum);
 
-        return ['code' => Code::SUCCESS_CODE, 'msg' => '', 'content' => $log_content];
+        return ['code' => Code::SUCCESS_CODE, 'msg' => '', 'content' => $logContent];
     }
 
 
     /**
      * 终止任务
      *
-     * @param $job_id
+     * @param $jobId
+     * @param Table $table
      * @return array
      */
-    public static function kill($job_id, Table $table)
+    public static function kill($jobId, Table $table)
     {
-        $job_info = JobExecutor::loadJob($job_id, $table);
+        $jobInfo = JobExecutor::loadJob($jobId, $table);
         $code = Code::SUCCESS_CODE;
         // 内存表里还有key
-        if ($job_info) {
-            $process_name = $job_info['process_name'];
-            if (self::killScriptProcess($process_name)) {
-                JobExecutor::removeJob($job_id, $table);
+        if ($jobInfo) {
+            $processName = $jobInfo['process_name'];
+            if (self::killScriptProcess($processName)) {
+                JobExecutor::removeJob($jobId, $table);
             } else {
                 $code = Code::ERROR_CODE;
             }
@@ -96,13 +98,14 @@ class ExecutorCenter
      * 触发任务运行
      *
      * @param $params
+     * @param $requestId
      * @param Server $server
      */
-    public static function run($params, $request_id, Server $server)
+    public static function run($params, $requestId, Server $server)
     {
         foreach ($params as $param) {
             // 投递异步任务
-            $param['requestId'] = $request_id;
+            $param['requestId'] = $requestId;
             self::appendLog($param['logDateTim'], $param['logId'], '调度中心执行任务参数：' . json_encode($params));
 
             $server->task($param);

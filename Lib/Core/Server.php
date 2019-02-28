@@ -10,5 +10,5 @@ namespace Lib\Core;
 
 class Server extends \Swoole\Server
 {
-    public $running_servers = [];
+    public $runningServers = [];
 }

@@ -15,7 +15,7 @@ class Cmd
 {
     use JobTool;
 
-    public static $running_server;
+    public static $runningServer;
     /**
      * 需要支持以下几种命令
      * start    启动
@@ -28,15 +28,21 @@ class Cmd
      * startAll 启动所有
      */
 
-    public static function exec($cmd, $name, $process_name = '')
+
+    /**
+     * @param $cmd
+     * @param $name
+     * @param string $processName
+     */
+    public static function exec($cmd, $name, $processName = '')
     {
-        $server_info = self::getServerIni($name);
-        if ($process_name) {
-            $server_info['conf']['server']['process_name'] = $process_name;
+        $serverInfo = self::getServerIni($name);
+        if ($processName) {
+            $serverInfo['conf']['server']['process_name'] = $processName;
         }
-        $biz_center = null;
-        if (!empty($server_info['conf']['xxljob']['open_registry'])) {
-            $biz_center = new BizCenter($server_info['conf']['xxljob']['host'], $server_info['conf']['xxljob']['port']);
+        $bizCenter = null;
+        if (!empty($serverInfo['conf']['xxljob']['open_registry'])) {
+            $bizCenter = new BizCenter($serverInfo['conf']['xxljob']['host'], $serverInfo['conf']['xxljob']['port']);
         }
         // 进程检测
         if (CmdProcess::processCheckExist()) {
@@ -47,13 +53,13 @@ class Cmd
 
                 // 调度中心rpc实例化
                 $time = self::convertSecondToMicroS();
-                if ($biz_center && !empty($server_info['conf']['xxljob']['open_registry'])) {
-                    $biz_center->open_registry = $server_info['conf']['xxljob']['open_registry'];
+                if ($bizCenter && !empty($serverInfo['conf']['xxljob']['open_registry'])) {
+                    $bizCenter->openRegistry = $serverInfo['conf']['xxljob']['open_registry'];
                     // 先移除
-                    $biz_center->registryRemove($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
+                    $bizCenter->registryRemove($time, $serverInfo['conf']['server']['app_name'], $serverInfo['conf']['server']['host'] . ':' . $serverInfo['conf']['server']['port']);
                 }
 
-                //获取status 之后去杀掉进程
+                // 获取status 之后去杀掉进程
                 if ($return['code'] == Code::SUCCESS_CODE) {
                     //先杀掉所有的run server
                     if (empty($return['data'])) {
@@ -63,8 +69,8 @@ class Cmd
 
                     $ret = system("  ps aux | grep " . SUPER_PROCESS_NAME . " | grep -v grep");
                     preg_match('/\d+/', $ret, $match);
-                    $server_id = $match['0'];
-                    if (posix_kill($server_id, 15)) {//如果成功了
+                    $serverId = $match['0'];
+                    if (posix_kill($serverId, 15)) {
                         echo 'stop ' . SUPER_PROCESS_NAME . "\033[32;40m [SUCCESS] \033[0m" . PHP_EOL;
                     } else {
                         echo 'stop ' . SUPER_PROCESS_NAME . "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
@@ -97,15 +103,15 @@ class Cmd
         } else {
             if ($cmd == 'start') {
                 // 启动完毕后
-                if (CmdProcess::execute($server_info['conf'], $cmd)) {
-                    $running_servers[$name] = ['server_info' => $server_info, 'name' => $name];
-                    self::startServerSock($running_servers);
+                if (CmdProcess::execute($serverInfo['conf'], $cmd)) {
+                    $runningServers[$name] = ['server_info' => $serverInfo, 'name' => $name];
+                    self::startServerSock($runningServers);
                     // 调度中心rpc实例化
                     $time = self::convertSecondToMicroS();
-                    if (!empty($server_info['conf']['xxljob']['open_registry'])) {
-                        $biz_center->disable_registry = $server_info['conf']['xxljob']['open_registry'];
+                    if (!empty($serverInfo['conf']['xxljob']['open_registry'])) {
+                        $bizCenter->openRegistry = $serverInfo['conf']['xxljob']['open_registry'];
                         // 第一次注册
-                        $biz_center->registry($time, $server_info['conf']['server']['app_name'], $server_info['conf']['server']['ip'] . ':' . $server_info['conf']['server']['port']);
+                        $bizCenter->registry($time, $serverInfo['conf']['server']['app_name'], $serverInfo['conf']['server']['host'] . ':' . $serverInfo['conf']['server']['port']);
                     }
                 }
             } else {
@@ -145,21 +151,21 @@ class Cmd
         }
 
         if ($cmd != 'status' && $cmd != 'shutdown' && $cmd != 'list') {
-            $server_path = CONF_PATH . '/' .$name . ".ini";
-            if (!file_exists($server_path)) {
+            $serverPath = CONF_PATH . '/' .$name . ".ini";
+            if (!file_exists($serverPath)) {
                 echo "your server name  $name not exist" . PHP_EOL;
                 exit;
             }
         }
 
-        //输出所有可以执行的server
+        // 输出所有可以执行的server
         if ($cmd == 'list') {
-            $config_dir = CONF_PATH . "/*.ini";
-            $config_arr = glob($config_dir);
+            $configDir = CONF_PATH . "/*.ini";
+            $configArr = glob($configDir);
             // 配置名必须是server name
             echo "your server list：" . PHP_EOL;
-            foreach ($config_arr as $server_name) {
-                echo basename($server_name, '.ini') . PHP_EOL;
+            foreach ($configArr as $serverName) {
+                echo basename($serverName, '.ini') . PHP_EOL;
             };
             echo '----------------------------' . PHP_EOL;
             exit;

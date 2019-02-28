@@ -21,31 +21,31 @@ trait JobTool
      */
     public static function intToByteArray($length)
     {
-        $byte_arr = [
+        $byteArr = [
             $length >> 24 & 0xff,
             $length >> 16 & 0xff,
             $length >> 8  & 0xff,
             $length       & 0xff
         ];
 
-        return $byte_arr;
+        return $byteArr;
     }
 
     /**
      * 转换字节数组到字符串
      *
-     * @param $byte_arr
+     * @param $byteArr
      * @return string
      */
-    public static function convertByteArrToStr($byte_arr)
+    public static function convertByteArrToStr($byteArr)
     {
-        $convert_str = '';
+        $convertStr = '';
 
-        foreach ($byte_arr as $byte) {
-            $convert_str .= chr($byte);
+        foreach ($byteArr as $byte) {
+            $convertStr .= chr($byte);
         }
 
-        return $convert_str;
+        return $convertStr;
     }
 
     /**
@@ -75,22 +75,22 @@ trait JobTool
     /**
      * 获取数据流并流入不同的解包器中
      *
-     * @param $stream_data
-     * @param $rpc_protocol
-     * @return int|mixed
+     * @param $streamData
+     * @param $rpcProtocol
+     * @return array|mixed
      */
-    public static function getDataStream($stream_data, $rpc_protocol)
+    public static function getDataStream($streamData, $rpcProtocol)
     {
-        $rpc_protocol = strtolower($rpc_protocol);
-        switch ($rpc_protocol) {
+        $rpcProtocol = strtolower($rpcProtocol);
+        switch ($rpcProtocol) {
             case 'json':
-                $stream_data = self::unpackJackson($stream_data);
+                $streamData = self::unpackJackson($streamData);
                 break;
             default:
-                return 0;
+                return [];
         }
 
-        return $stream_data;
+        return $streamData;
     }
 
     /**
@@ -128,16 +128,16 @@ trait JobTool
     /**
      * 设置发送的data
      *
-     * @param $send_data
+     * @param $sendData
      * @return string
      */
-    public static function packSendData($send_data)
+    public static function packSendData($sendData)
     {
-        $bytes = self::convertStrToBytes($send_data);
-        $length_bytes = self::intToByteArray(sizeof($bytes));
-        $total_data =  array_merge($length_bytes, $bytes);
+        $bytes = self::convertStrToBytes($sendData);
+        $lengthBytes = self::intToByteArray(sizeof($bytes));
+        $totalData =  array_merge($lengthBytes, $bytes);
 
-        return self::convertByteArrToStr($total_data);
+        return self::convertByteArrToStr($totalData);
     }
 
     /**
@@ -157,46 +157,46 @@ trait JobTool
      * 最后输出返回的数据组合
      *
      * @param $result
-     * @param $request_id
-     * @param null $error_msg
-     * @return mixed
+     * @param $requestId
+     * @param null $errorMsg
+     * @return string
      */
-    public static function outputStream($result, $request_id, $error_msg = null)
+    public static function outputStream($result, $requestId, $errorMsg = null)
     {
-        $main_json = json_encode(['result' => $result, 'requestId' => $request_id, 'errorMsg' => $error_msg]);
+        $mainJson = json_encode(['result' => $result, 'requestId' => $requestId, 'errorMsg' => $errorMsg]);
 
-        $main_json_bytes = self::convertStrToBytes($main_json);
+        $mainJsonBytes = self::convertStrToBytes($mainJson);
 
-        $json_len_bytes = self::intToByteArray($main_json_bytes);
+        $jsonLenBytes = self::intToByteArray($mainJsonBytes);
 
-        $output_data = array_merge($json_len_bytes, $main_json_bytes);
+        $outputData = array_merge($jsonLenBytes, $mainJsonBytes);
 
-        return self::convertByteArrToStr($output_data);
+        return self::convertByteArrToStr($outputData);
     }
 
     /**
      * 解包json数据
      *
-     * @param $stream_data
+     * @param $streamData
      * @return mixed
      */
-    protected static function unpackJackson($stream_data)
+    protected static function unpackJackson($streamData)
     {
-        $stream_data = preg_replace('/[\x00-\x1F]/', '', $stream_data);
+        $streamData = preg_replace('/[\x00-\x1F]/', '', $streamData);
 
-        return json_decode($stream_data, true);
+        return json_decode($streamData, true);
     }
 
     /**
      * 追加执行日志
      *
-     * @param $log_time
-     * @param $log_id
+     * @param $logtTime
+     * @param $logId
      * @param $content
      */
-    public static function appendLog($log_time, $log_id, $content)
+    public static function appendLog($logtTime, $logId, $content)
     {
-        $filename = self::makeLogFileName($log_time, $log_id);
+        $filename = self::makeLogFileName($logtTime, $logId);
         $handle = fopen($filename, "a+");
         $date = date('Y-m-d H:i:s', time());
         fwrite($handle, '【' . $date . '】' .$content . "\n");
@@ -204,41 +204,43 @@ trait JobTool
     }
 
     /**
-     * jobid log_time拼日志文件名称
+     * jobId logTime拼日志文件名称
      *
-     * @param $log_time
-     * @param $log_id
+     * @param $logTime
+     * @param $logId
+     * @return string
      */
-    public static function makeLogFileName($log_time, $log_id)
+    public static function makeLogFileName($logTime, $logId)
     {
 
-        $time = '/data/wwwroot/xxl-job-swoole/Log/'. date('Y-m-d', self::convertMicroSToSecond($log_time));
+        $time = APP_PATH . '/Log/'. date('Y-m-d', self::convertMicroSToSecond($logTime));
         if (!file_exists($time)) {
             mkdir($time);
         }
-        $filename =  $time . DIRECTORY_SEPARATOR . $log_id . '.log';
+        $filename =  $time . DIRECTORY_SEPARATOR . $logId . '.log';
         return $filename;
     }
 
     /**
      * 读取日志文件
      *
-     * @param $log_file_name
-     * @param $from_line_num
+     * @param $logFileName
+     * @param $fromLineNum
+     * @return array
      */
-    public static function readLog($log_file_name, $from_line_num)
+    public static function readLog($logFileName, $fromLineNum)
     {
 
         $filter = [];
-        if (file_exists($log_file_name)){
-            $file_handle = fopen($log_file_name, "r");
+        if (file_exists($logFileName)){
+            $file_handle = fopen($logFileName, "r");
             while (!feof($file_handle)) {
                 $line = fgets($file_handle);
                 $filter[] = $line;
             }
             fclose($file_handle);
         }
-        return ['fromLineNum' => $from_line_num, 'toLineNum' => count($filter), 'logContent' => implode('', array_slice($filter, ($from_line_num -1 )))];
+        return ['fromLineNum' => $fromLineNum, 'toLineNum' => count($filter), 'logContent' => implode('', array_slice($filter, ($fromLineNum - 1 )))];
     }
 
     /**
@@ -263,78 +265,78 @@ trait JobTool
     /**
      * @description 通过unix sock信息
      */
-    public static function startServerSock($running_servers)
+    public static function startServerSock($runningServers)
     {
         self::setProcessName(SUPER_PROCESS_NAME);
         //这边其实也是也是demon进程
-        $sock_server = new Server(UNIX_SOCK_PATH, 0, SWOOLE_BASE, SWOOLE_UNIX_STREAM);
+        $sockServer = new Server(UNIX_SOCK_PATH, 0, SWOOLE_BASE, SWOOLE_UNIX_STREAM);
 
         // running servers
-        $sock_server->running_servers = $running_servers;
+        $sockServer->runningServers = $runningServers;
 
-        $sock_server->set([
+        $sockServer->set([
             'worker_num' => 1,
             'daemonize' => 1,
             'log_file' => '/data/wwwroot/xxl-job-swoole/Log/runtime.log',
             'enable_coroutine' => false
         ]);
 
-        $sock_server->on('connect', function() {
+        $sockServer->on('connect', function() {
         });
 
         // 处理各种信号指令
-        $sock_server->on('receive', function (Server $server, $fd, $from_id, $data) {
+        $sockServer->on('receive', function (Server $server, $fd, $fromId, $data) {
             $info = json_decode($data, true);
             $cmd = $info['cmd'];
-            $server_name = $info['name'];
+            $serverName = $info['name'];
             // 不存在则启动
-            $server_info = self::getServerIni($server_name);
-            $server_conf = $server_info['conf'];
+            $serverInfo = self::getServerIni($serverName);
+            $serverConf = $serverInfo['conf'];
             switch ($cmd) {
                 case 'start':
-                    if (isset($serv->running_servers[$server_name])) {
-                        $server->send($fd, json_encode(['code' => 200, "msg" => $server_name . ' is already running']));
+                    if (isset($serv->runningServers[$serverName])) {
+                        $server->send($fd, json_encode(['code' => 200, "msg" => $serverName . ' is already running']));
                         return;
                     }
 
-                    if ($server_info['code'] != Code::SUCCESS_CODE) {
-                        $server->send($fd, json_encode($server_conf));
+                    if ($serverInfo['code'] != Code::SUCCESS_CODE) {
+                        $server->send($fd, json_encode($serverConf));
                         return ;
                     }
 
                     // 进程守护
-                    if (CmdProcess::execute($server_conf, $cmd)) {
-                        $server->running_servers[$server_name] = ['server_info' => $server_conf, 'name' => $server_name];
-                        $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name} start" . " \033[32;40m [SUCCESS] \033[0m"]));
+                    if (CmdProcess::execute($serverConf, $cmd)) {
+                        $server->runningServers[$serverName] = ['server_info' => $serverConf, 'name' => $serverName];
+                        $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$serverName} start" . " \033[32;40m [SUCCESS] \033[0m"]));
                         return;
                     }
                     break;
                 case 'stop':
-                    CmdProcess::execute($server_conf, 'stop');
-                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers, 'msg' => "server {$server_name} stop" . " \033[32;40m [SUCCESS] \033[0m"]));
-                    unset($server->running_servers[$server_name]);
+                    CmdProcess::execute($serverConf, 'stop');
+                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->runningServers, 'msg' => "server {$serverName} stop" . " \033[32;40m [SUCCESS] \033[0m"]));
+                    unset($server->runningServers[$serverName]);
                     break;
                 case 'reload':
-                    CmdProcess::execute($server_conf, $cmd);
-                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers, 'msg' => "server {$server_name}  reload " . " \033[32;40m [SUCCESS] \033[0m"]));
+                    CmdProcess::execute($serverConf, $cmd);
+                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->runningServers, 'msg' => "server {$serverName}  reload " . " \033[32;40m [SUCCESS] \033[0m"]));
                     return;
                 case 'restart':
                     //首先unset 防止被自动拉起，然后停止，然后sleep 然后start
-                    unset($server->running_servers[$server_name]);//从runserver中干掉
-                    CmdProcess::execute($server_conf, 'stop');
+                    unset($server->runningServers[$serverName]);//从runserver中干掉
+                    CmdProcess::execute($serverConf, 'stop');
                     sleep(2);
-                    CmdProcess::execute($server_conf, 'start');
-                    $server->running_servers[$server_name] = ['server_info' => $server_conf, 'name' => $server_name]; //添加到runServer中
-                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$server_name} restart  \033[32;40m [SUCCESS] \033[0m"]));
+                    CmdProcess::execute($serverConf, 'start');
+                    $server->runningServers[$serverName] = ['server_info' => $serverConf, 'name' => $serverName]; //添加到runServer中
+                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'msg' => "server {$serverName} restart  \033[32;40m [SUCCESS] \033[0m"]));
                     return;
                 case 'status':
                 default:
-                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->running_servers]));
+                    $server->send($fd, json_encode(['code' => Code::SUCCESS_CODE, 'data' => $server->runningServers]));
                     break;
             }
         });
 
-        $sock_server->start();
+        $sockServer->start();
     }
 
 
@@ -359,12 +361,12 @@ trait JobTool
      * @param $project_name
      * @return array|mixed
      */
-    public static function getProjectIndex($project_name)
+    public static function getProjectIndex($projectName)
     {
         $map = [
-            'platform' => $project_name .'/ecs/public/index.php',
+            'platform' => $projectName .'/ecs/public/index.php',
         ];
-        return isset($map[$project_name]) ? $map[$project_name] : '';
+        return isset($map[$projectName]) ? $map[$projectName] : '';
 
     }
 
@@ -376,8 +378,8 @@ trait JobTool
     {
         $ret = system("ps aux | grep '" . $name . "' | grep -v grep ");
         preg_match('/\d+/', $ret, $match);//匹配出来进程号
-        $server_id = $match[0];
-        if (posix_kill($server_id, 15)) {
+        $serverId = $match[0];
+        if (posix_kill($serverId, 15)) {
             //如果成功了
             return true;
         } else {
@@ -397,8 +399,8 @@ trait JobTool
         if (!$match) {
             return false;
         }
-        $server_id = $match[0];
-        if ($server_id) {
+        $serverId = $match[0];
+        if ($serverId) {
             //如果成功了
             return true;
         } else {
@@ -415,28 +417,30 @@ trait JobTool
     public static function getHandlerParams($data, $conf)
     {
         // 项目名_类名_方法名
-        $executor_handler = $data['executorHandler'];
+        $executorHandler = $data['executorHandler'];
         // 规则解析
-        $handler_info_arr = explode('_', $executor_handler);
+        $handlerInfoArr = explode('_', $executorHandler);
         // 项目地址
-        $project_index = self::getProjectIndex($handler_info_arr[0]);
+        $projectIndex = self::getProjectIndex($handlerInfoArr[0]);
         // 入口文件地址
-        $index_path = $conf['project']['root_path'] . $project_index;
+        $indexPath = $conf['project']['root_path'] . $projectIndex;
         // 拼成可以调用脚本的样子
-        if (empty($handler_info_arr[3])) {
+        if (empty($handlerInfoArr[3])) {
             // 测试用
-            $class_path = '';
-            $index_path = '/data/wwwroot/xxl-job-swoole/Tests/test_cli.php';
+            $classPath = '';
+            $dirname = empty($handlerInfoArr[1]) ? 'Tests' : $handlerInfoArr[1];
+            $targetFilename = empty($handlerInfoArr[2]) ? 'testCli' : $handlerInfoArr[2];
+            $indexPath = APP_PATH . '/' . $dirname . '/' . $targetFilename . '.php';
         } else {
-            $class_path = $handler_info_arr[1] . '/' . $handler_info_arr[2] . '/' . $handler_info_arr[3];
+            $classPath = $handlerInfoArr[1] . '/' . $handlerInfoArr[2] . '/' . $handlerInfoArr[3];
         }
-        $params = [$index_path, $class_path];
+        $params = [$indexPath, $classPath];
         // 带执行参数
         if ($data['executorParams']) {
-            $params_key_values = explode('&', $data['executorParams']);
+            $paramsKeyValues = explode('&', $data['executorParams']);
 
-            foreach ($params_key_values as $params_key_value) {
-                $params[] = '-' . $params_key_value;
+            foreach ($paramsKeyValues as $paramsKeyValue) {
+                $params[] = '-' . $paramsKeyValue;
             }
         }
         return $params;
@@ -449,7 +453,7 @@ trait JobTool
     {
         if (function_exists('cli_set_process_title')) {
             cli_set_process_title($name);
-        } else if (function_exists('swoole_set_process_name')) {
+        } elseif (function_exists('swoole_set_process_name')) {
             swoole_set_process_name($name);
         } else {
             trigger_error(__METHOD__ . " failed. require cli_set_process_title or swoole_set_process_name.");

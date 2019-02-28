@@ -17,7 +17,7 @@ class BizCenter
 {
     public $client = NULL;
 
-    public $open_registry = 0;
+    public $openRegistry = 0;
 
     public function __construct($host = '127.0.0.1', $port = '8987')
     {
@@ -30,12 +30,13 @@ class BizCenter
      * 注册执行器
      *
      * @param $time
-     * @param $app_name
+     * @param $appName
      * @param $address
+     * @return null
      */
-    public function registry($time, $app_name, $address)
+    public function registry($time, $appName, $address)
     {
-        if (!$this->open_registry) {
+        if (!$this->openRegistry) {
             return null;
         }
         // 执行注册 server
@@ -45,7 +46,7 @@ class BizCenter
             'className' => 'com.xxl.job.core.biz.AdminBiz',
             'methodName' => 'registry',
             'parameterTypes' => ['com.xxl.job.core.biz.model.RegistryParam'],
-            'parameters' => [['registGroup' => 'EXECUTOR', 'registryKey' => $app_name, 'registryValue' => $address]]
+            'parameters' => [['registGroup' => 'EXECUTOR', 'registryKey' => $appName, 'registryValue' => $address]]
         ]);
         $message = JobTool::packSendData($params);
         $this->client->send($message);
@@ -53,10 +54,10 @@ class BizCenter
         $result = JobTool::unpackData($data);
         if ($result['result']['code'] === 200) {
             // 注册成功
-            echo $params . PHP_EOL . '注册成功' . PHP_EOL;
+            echo $appName . ':' . $address . PHP_EOL . '注册成功' . PHP_EOL;
         } else {
             // 注册失败
-            echo $params . PHP_EOL . '注册失败' . PHP_EOL;
+            echo $appName . ':' . $address . PHP_EOL . '注册失败' . PHP_EOL;
         }
     }
 
@@ -64,10 +65,10 @@ class BizCenter
      * 摘除执行器
      *
      * @param $time
-     * @param $app_name
+     * @param $appName
      * @param $address
      */
-    public function registryRemove($time, $app_name, $address)
+    public function registryRemove($time, $appName, $address)
     {
         // 摘除执行器
         $params = json_encode([
@@ -76,32 +77,34 @@ class BizCenter
             'className' => 'com.xxl.job.core.biz.AdminBiz',
             'methodName' => 'registryRemove',
             'parameterTypes' => ['com.xxl.job.core.biz.model.RegistryParam'],
-            'parameters' => [['registGroup' => 'EXECUTOR', 'registryKey' => $app_name, 'registryValue' => $address]]
+            'parameters' => [['registGroup' => 'EXECUTOR', 'registryKey' => $appName, 'registryValue' => $address]]
         ]);
         $message = JobTool::packSendData($params);
         $this->client->send($message);
         $data = $this->client->recv();
         $result = JobTool::unpackData($data);
         if ($result['result']['code'] === 200) {
-            echo $params . PHP_EOL . '摘除成功' . PHP_EOL;
+            echo $appName . ':' . $address . PHP_EOL . '摘除成功' . PHP_EOL;
         } else {
             // 摘除失败
-            echo $params . PHP_EOL . '摘除失败' . PHP_EOL;
+            echo $appName . ':' . $address . PHP_EOL . '摘除失败' . PHP_EOL;
         }
     }
 
     /**
-     * 任务执行回调
+     * 任务回调
      *
      * @param $time
-     * @param $job_id
+     * @param $logId
+     * @param $requestId
      * @param $logDateTim
-     * @param $execute_result
+     * @param $executeResult
+     * @return bool
      */
-    public function callback($time, $log_id, $requet_id, $logDateTim, $execute_result)
+    public function callback($time, $logId, $requestId, $logDateTim, $executeResult)
     {
         $params = json_encode([
-            'requestId' => $requet_id,
+            'requestId' => $requestId,
             'createMillisTime' => $time,
             'accessToken' => '',
             'className' => 'com.xxl.job.core.biz.AdminBiz',
@@ -109,9 +112,9 @@ class BizCenter
             'parameterTypes' => ['java.util.List'],
             'parameters' => [
                 [[
-                    'logId' => $log_id,
+                    'logId' => $logId,
                     'logDateTim' => $logDateTim,
-                    'executeResult' => $execute_result
+                    'executeResult' => $executeResult
                 ]]
             ]
         ]);

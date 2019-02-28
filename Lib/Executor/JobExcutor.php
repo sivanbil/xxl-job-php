@@ -13,24 +13,24 @@ use Lib\Core\Table;
 class JobExecutor
 {
     /**
-     * @param $job_id
+     * @param $jobId
      * @param Table $table
-     * @return array|bool|string
+     * @return mixed
      */
-    public static function loadJob($job_id, Table $table)
+    public static function loadJob($jobId, Table $table)
     {
 
-        return $table->get($job_id);
+        return $table->get($jobId);
     }
 
 
     /**
-     * @param $job_id
+     * @param $jobId
      * @param Table $table
-     * @return array|bool|string
+     * @return mixed
      */
-    public static function removeJob($job_id, Table $table)
+    public static function removeJob($jobId, Table $table)
     {
-        return $table->get($job_id);
+        return $table->get($jobId);
     }
 }

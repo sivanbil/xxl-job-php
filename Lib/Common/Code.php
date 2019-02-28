@@ -26,6 +26,7 @@ class Code
      */
     public static function getMsg($str)
     {
-        return isset(self::MSG_MAPPING[$str]) ? self::MSG_MAPPING[$str] : $str;
+        $mapping = self::MSG_MAPPING;
+        return isset($mapping[$str]) ? $mapping[$str] : $str;
     }
 }
