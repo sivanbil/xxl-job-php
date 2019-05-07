@@ -10,6 +10,7 @@ namespace Lib\Common;
 use Lib\Executor\CmdProcess;
 use Lib\Core\Client;
 use Lib\Core\Server;
+use Rules\RuleConf;
 
 trait JobTool
 {
@@ -277,7 +278,7 @@ trait JobTool
         $sockServer->set([
             'worker_num' => 1,
             'daemonize' => 1,
-            'log_file' => '/data/wwwroot/xxl-job-swoole/Log/runtime.log',
+            'log_file' => APP_PATH . '/Log/runtime.log',
             'enable_coroutine' => false
         ]);
 
@@ -358,19 +359,6 @@ trait JobTool
     }
 
     /**
-     * @param $project_name
-     * @return array|mixed
-     */
-    public static function getProjectIndex($projectName)
-    {
-        $map = [
-            'platform' => $projectName .'/ecs/public/index.php',
-        ];
-        return isset($map[$projectName]) ? $map[$projectName] : '';
-
-    }
-
-    /**
      * @param $name
      * @return string
      */
@@ -378,13 +366,16 @@ trait JobTool
     {
         $ret = system("ps aux | grep '" . $name . "' | grep -v grep ");
         preg_match('/\d+/', $ret, $match);//匹配出来进程号
-        $serverId = $match[0];
-        if (posix_kill($serverId, 15)) {
-            //如果成功了
-            return true;
-        } else {
-            return false;
+        if (!empty($match[0])) {
+            $serverId = $match[0];
+            if (posix_kill($serverId, 15)) {
+                //如果成功了
+                return true;
+            } else {
+                return false;
+            }
         }
+        return false;
     }
 
     /**
@@ -421,29 +412,34 @@ trait JobTool
         // 规则解析
         $handlerInfoArr = explode('_', $executorHandler);
         // 项目地址
-        $projectIndex = self::getProjectIndex($handlerInfoArr[0]);
-        // 入口文件地址
-        $indexPath = $conf['project']['root_path'] . $projectIndex;
+        $projectName = $handlerInfoArr[0];
+        $projectInfo = RuleConf::info($projectName);
+
+        $runMode = empty($projectInfo['run_mode']) ? PHP_RUN_MODE : $projectInfo['run_mode'];
         // 拼成可以调用脚本的样子
-        if (empty($handlerInfoArr[3])) {
-            // 测试用
-            $classPath = '';
-            $dirname = empty($handlerInfoArr[1]) ? 'Tests' : $handlerInfoArr[1];
-            $targetFilename = empty($handlerInfoArr[2]) ? 'testCli' : $handlerInfoArr[2];
-            $indexPath = APP_PATH . '/' . $dirname . '/' . $targetFilename . '.php';
+        if ((empty($handlerInfoArr[3]) && empty($projectInfo['run_mode'])) || empty($projectInfo)) {
+            // php执行器本地的Tests测试脚本
+            $params = RuleConf::supportLocal($handlerInfoArr, $projectName, $projectInfo);
+        } elseif (RuleConf::ARTISAN_MODE === strtolower($handlerInfoArr[1]) && strtolower($handlerInfoArr[2]) === RuleConf::LARAVEL_COMMAND_NAME_IDENTIFIER) {
+            // laravel 框架支持
+            $params = RuleConf::supportLaravelFramework($handlerInfoArr, $projectName, $conf, $projectInfo);
         } else {
-            $classPath = $handlerInfoArr[1] . '/' . $handlerInfoArr[2] . '/' . $handlerInfoArr[3];
+            // 支持其他框架
+            $params = RuleConf::supportCommonFramework($handlerInfoArr, $projectName, $conf, $projectInfo);
         }
-        $params = [$indexPath, $classPath];
+
         // 带执行参数
         if ($data['executorParams']) {
             $paramsKeyValues = explode('&', $data['executorParams']);
-
+            $paramIdentifier = empty($projectInfo['param_identify']) ? CLI_PARAM_IDENTIFY : $projectInfo['param_identify'];
             foreach ($paramsKeyValues as $paramsKeyValue) {
-                $params[] = '-' . $paramsKeyValue;
+                $params[] = $paramIdentifier . $paramsKeyValue;
             }
         }
-        return $params;
+
+        self::appendLog($data['logDateTim'], $data['logId'], 'handle params过程中projectInfo信息：' . json_encode($projectInfo));
+
+        return ['params' => $params, 'queue_key' => ftok($projectInfo['file_real_path'], $projectInfo['identifier'])];
     }
 
     /**
@@ -458,5 +454,16 @@ trait JobTool
         } else {
             trigger_error(__METHOD__ . " failed. require cli_set_process_title or swoole_set_process_name.");
         }
+    }
+
+    /**
+     *  返回格式化数据
+     *
+     * @param $time
+     * @return false|string
+     */
+    public static function formatDatetime($time, $format = 'Y-m-d H:i:s')
+    {
+        return date($format, $time);
     }
 }

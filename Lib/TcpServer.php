@@ -41,8 +41,9 @@ class TcpServer
     protected $runPath = '/tmp';
 
     // server setting 信息
-    protected $setting = [];
-
+    protected $setting = [
+        'log_file' => APP_PATH . '/Log/runtime.log'
+    ];
 
     /**
      * TcpServer constructor.
@@ -101,15 +102,7 @@ class TcpServer
      */
     public function onWorkerStart(Server $server)
     {
-        // 定时器去注册
-        $server->tick($this->conf['xxljob']['registry_interval_ms'], function() {
-            $time = self::convertSecondToMicroS();
-            if (!empty($this->conf['xxljob']['open_registry'])) {
-                $bizCenter = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
-                $bizCenter->openRegistry = $this->conf['xxljob']['open_registry'];
-                $bizCenter->registry($time, $this->conf['server']['app_name'], $this->conf['server']['host'] . ':' . $this->conf['server']['port']);
-            }
-        });
+        $this->makeTick($server);
     }
 
     /**
@@ -197,6 +190,7 @@ class TcpServer
     public function onTask(Server $server, $taskId, $fromId, $data)
     {
         $params = self::getHandlerParams($data, $this->conf);
+
         // 设置到swoole_table里
         $processName = 'task_' . $data['jobId'];
 
@@ -308,7 +302,7 @@ class TcpServer
      */
     protected function initRuntime()
     {
-        $this->setting = $this->conf['setting'];
+        $this->setting = array_merge($this->setting, $this->conf['setting']);
 
         $this->masterPidFile = $this->runPath . '/' . $this->processName . '.master.pid';
         $this->managerPidFile = $this->runPath . '/' . $this->processName . '.manager.pid';
@@ -328,7 +322,7 @@ class TcpServer
         if (!empty($this->conf['server']['process_name'])) {
             $this->processName = $this->conf['server']['process_name'];
         }
-        $this->server->set($this->conf['setting']);
+        $this->server->set($this->setting);
         // 注册回调事件
         $this->server->on('start',   [$this, 'onStart']);
         $this->server->on('connect', [$this, 'onConnect']);
@@ -432,5 +426,23 @@ class TcpServer
     protected function checkPidIsRunning($pid)
     {
         return posix_kill($pid, 0);
+    }
+
+    /**
+     * 创建一个定时器
+     *
+     * @param $server
+     */
+    protected function makeTick($server)
+    {
+        // 定时器去注册
+        $server->tick($this->conf['xxljob']['registry_interval_ms'], function() {
+            $time = self::convertSecondToMicroS();
+            if (!empty($this->conf['xxljob']['open_registry'])) {
+                $bizCenter = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
+                $bizCenter->openRegistry = $this->conf['xxljob']['open_registry'];
+                $bizCenter->registry($time, $this->conf['server']['app_name'], $this->conf['server']['host'] . ':' . $this->conf['server']['port']);
+            }
+        });
     }
 }

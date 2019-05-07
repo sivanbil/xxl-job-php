@@ -1,4 +1,6 @@
 <?php
+date_default_timezone_set("PRC");
+
 /**
  * 第一阶段的实现所有api，在第一阶段时，要考虑之后的扩展性
  * 第二阶段的实现阻塞策略

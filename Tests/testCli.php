@@ -7,6 +7,5 @@
  * Time: 4:37 PM
  */
 
-sleep(10);
 echo 'success';
 

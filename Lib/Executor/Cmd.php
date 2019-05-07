@@ -25,7 +25,7 @@ class Cmd
      * shutdown 关闭
      * status   查看状况
      * list     列表
-     * startAll 启动所有
+     *
      */
 
 
@@ -61,7 +61,7 @@ class Cmd
 
                 // 获取status 之后去杀掉进程
                 if ($return['code'] == Code::SUCCESS_CODE) {
-                    //先杀掉所有的run server
+                    // 先杀掉所有的run server
                     if (empty($return['data'])) {
                         echo 'shutdown' . "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
                         exit;

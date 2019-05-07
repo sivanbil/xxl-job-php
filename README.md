@@ -32,6 +32,8 @@
 
 - Conf 服务器配置
 
+- Rules 项目目录规则配置
+
 - Lib  核心类库
   - Common   工具通用类
   - Core     基于swoole 的核心类
@@ -134,16 +136,3 @@ registry_interval_ms = 20000
 ; 线上要设置为1，主动去向注册中心发起注册请求
 open_registry = 0
 </pre>
-
-
-## 本地测试环境的搭建概要
-
-- 本地Java运行环境,比如Maven,JDK,编辑器IDEA可以自动帮你安装Java依赖包
-- Java框架提前准备，Spring系列，需要具备阅读xxl-job源码、相关配置信息、断点调试的基础能力
-- 拉取任务调度中心的代码
-- 配置好调度中心的管理后台，Server启动
-- 然后拉取PHP执行器的代码
-- 然后配置Server信息
-- 然后启动Server
-
-

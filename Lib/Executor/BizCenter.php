@@ -52,12 +52,13 @@ class BizCenter
         $this->client->send($message);
         $data = $this->client->recv();
         $result = JobTool::unpackData($data);
+        $formatDatetime = JobTool::formatDatetime(time());
         if ($result['result']['code'] === 200) {
             // 注册成功
-            echo $appName . ':' . $address . PHP_EOL . '注册成功' . PHP_EOL;
+            echo '[' . $formatDatetime . ']' . $appName . ':' . $address . PHP_EOL . '注册成功' . PHP_EOL;
         } else {
             // 注册失败
-            echo $appName . ':' . $address . PHP_EOL . '注册失败' . PHP_EOL;
+            echo '[' . $formatDatetime . ']' . $appName . ':' . $address . PHP_EOL . '注册失败' . PHP_EOL;
         }
     }
 
@@ -83,11 +84,13 @@ class BizCenter
         $this->client->send($message);
         $data = $this->client->recv();
         $result = JobTool::unpackData($data);
+        $formatDatetime = JobTool::formatDatetime(time());
+
         if ($result['result']['code'] === 200) {
-            echo $appName . ':' . $address . PHP_EOL . '摘除成功' . PHP_EOL;
+            echo '[' . $formatDatetime . ']' . $appName . ':' . $address . PHP_EOL . '摘除成功' . PHP_EOL;
         } else {
             // 摘除失败
-            echo $appName . ':' . $address . PHP_EOL . '摘除失败' . PHP_EOL;
+            echo '[' . $formatDatetime . ']' . $appName . ':' . $address . PHP_EOL . '摘除失败' . PHP_EOL;
         }
     }
 
@@ -123,10 +126,10 @@ class BizCenter
         $data = $this->client->recv();
         $result = JobTool::unpackData($data);
         if ($result['result']['code'] === 200) {
-            // 注册成功
+            // 回调成功
             return true;
         } else {
-            // 注册失败
+            // 回调失败
             return false;
         }
     }
