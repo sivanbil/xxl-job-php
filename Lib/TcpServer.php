@@ -16,6 +16,7 @@ use Lib\Core\Table;
 use Lib\Executor\BizCenter;
 use Lib\Executor\ExecutorCenter;
 use Lib\Executor\JobStrategy;
+use Lib\Core\Process;
 
 class TcpServer
 {
@@ -45,6 +46,20 @@ class TcpServer
         'log_file' => APP_PATH . '/Log/runtime.log'
     ];
 
+    //
+    protected $currentServer = null;
+
+    protected $availableServers = [];
+
+    protected $unavailableServers = [];
+
+    protected $xxlJobServers = [];
+
+    /* @see  Table*/
+    protected $cacheTable;
+
+    /* @see  Table*/
+    protected $panicTable;
     /**
      * TcpServer constructor.
      * @param $conf
@@ -82,6 +97,9 @@ class TcpServer
             case 'status':
                 $this->status();
                 break;
+            case 'countTable':
+                $this->table->count();
+                break;
             default:
                 echo 'Usage:php index.php start | stop | reload | restart | status | help' . PHP_EOL;
                 break;
@@ -102,7 +120,11 @@ class TcpServer
      */
     public function onWorkerStart(Server $server)
     {
-        $this->makeTick($server);
+        $workerId = $server->worker_id;
+        self::setProcessNameProperty($this->processName . ': worker process ' . $workerId);
+        if (version_compare(SWOOLE_VERSION, '1.10.5', '<')) {
+            $this->makeTick($server);
+        }
     }
 
     /**
@@ -116,6 +138,10 @@ class TcpServer
 
         file_put_contents($this->masterPidFile, $server->master_pid);
         file_put_contents($this->managerPidFile, $server->manager_pid);
+        // 增加定时器 有些版本不支持需要放在work启动的时候
+        if (version_compare(SWOOLE_VERSION, '1.10.5', '>=')) {
+            $this->makeTick($server);
+        }
     }
 
     /**
@@ -141,12 +167,11 @@ class TcpServer
 
         $parameters = $req['parameters'];
         $invokeName = $req['methodName'];
-
         // 根据调用不同方法
         switch ($invokeName) {
             case 'run':
                 // 任务处理
-                ExecutorCenter::run($parameters, $req['requestId'], $server);
+                ExecutorCenter::run($parameters, $req['requestId'], $server, $this->conf, $this->table, $this->cacheTable);
                 // 调度结果
                 $result = ['code' => Code::SUCCESS_CODE];
                 break;
@@ -187,34 +212,22 @@ class TcpServer
      * @param $fromId
      * @param $data
      */
-    public function onTask(Server $server, $taskId, $fromId, $data)
+    public function onTask(Server $server, $taskId, $fromId, $taskData)
     {
-        $params = self::getHandlerParams($data, $this->conf);
-
-        // 设置到swoole_table里
-        $processName = 'task_' . $data['jobId'];
-
-        $exist = true;
-        if (!$this->table->get($data['jobId'])) {
-            $this->table->set($data['jobId'], ['task_id' => $taskId, 'log_id' => $data['logId'], 'process_name' => $processName]);
-            $exist = false;
+        $data = $taskData['job_data'];
+        try {
+            $params = $taskData['params'];
+            // 按照队列执行
+            return JobStrategy::serial($data, $this->conf['server'], $params, $this->table);
+        } catch (\Exception $exception) {
+            return json_encode([
+                'job_id' => $data['jobId'],
+                'request_id' => $data['requestId'],
+                'log_id' => $data['logId'],
+                'log_date_time' => $data['logDateTim'],
+                'exec_result_msg' => 'failed.' . $exception->getMessage()
+            ]);
         }
-
-        // 丢弃下一个
-        if ($exist && $data['executorBlockStrategy'] == JobStrategy::DISCARD_NEXT_SCHEDULING) {
-            self::appendLog($data['logDateTim'], $data['logId'], '此task因策略需要被丢弃：' . json_encode($params));
-            return JobStrategy::discard($data);
-        }
-
-        // 丢弃之前的使用新的
-        if ($exist && $data['executorBlockStrategy'] == JobStrategy::USE_NEXT_SCHEDULING) {
-            self::appendLog($data['logDateTim'], $data['logId'], '上一个task因策略需要被丢弃：' . json_encode($params));
-            self::killScriptProcess($processName);
-        }
-
-        self::appendLog($data['logDateTim'], $data['logId'], '执行task参数：' . json_encode($params));
-        // 按照队列执行
-        return JobStrategy::serial($data, $this->conf['server'], $params, $this->table);
     }
 
     /**
@@ -230,8 +243,6 @@ class TcpServer
 
         $this->table->del($data['job_id']);
 
-        $bizCenter = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
-        $time = self::convertSecondToMicroS();
         $logId = $data['log_id'];
         $logTime = $data['log_date_time'];
         $requestId = $data['request_id'];
@@ -248,18 +259,26 @@ class TcpServer
             }
             $executeResult['content'] =  $data['exec_result_msg'];
             // 追加执行结果
-            self::appendLog($data['log_date_time'], $data['log_id'], '脚本执行结果:' . $data['exec_result_msg']);
+            self::appendLog($data['log_id'], '脚本执行结果:' . $data['exec_result_msg']);
         }
         // 结果回调
-        $result = $bizCenter->callback($time, $logId, $requestId, $logTime, $executeResult);
-
-        $msg = Code::SUCCESS_CODE;
-        if ($result) {
-            $msg = Code::SUCCESS_CODE;
+        $retryTimes = self::$retryTimes;
+        while ($retryTimes > 0) {
+            $currentServer = self::getCurrentServer($this->cacheTable);
+            $time = self::convertSecondToMicroS();
+            self::appendLog($data['log_id'], $currentServer);
+            $bizCenter = self::getBizCenterByHostInfo($currentServer);
+            $result = $bizCenter->callback($time, $logId, $requestId, $logTime, $executeResult);
+            if ($result) {
+                self::appendLog($data['log_id'], $currentServer . '执行完成,task回调:' . json_encode([$result, $bizCenter->getHost()]));
+                $retryTimes = 0;
+            } else {
+                $retryTimes--;
+                self::appendLog($data['log_id'], $currentServer . '执行完成,task回调失败:' . json_encode([$result, $bizCenter->getHost()]));
+                sleep(20);
+            }
         }
-        self::appendLog($data['log_date_time'], $data['log_id'], 'task回调:' . $msg);
-
-        self::appendLog($data['log_date_time'], $data['log_id'], '任务执行完成');
+        self::appendLog($data['log_id'], '任务执行完成end');
     }
 
     /**
@@ -281,8 +300,6 @@ class TcpServer
      */
     public function setProcessNameProperty($processName)
     {
-        $this->processName = $processName;
-
         self::setProcessName($processName);
     }
 
@@ -308,9 +325,27 @@ class TcpServer
         $this->managerPidFile = $this->runPath . '/' . $this->processName . '.manager.pid';
         // table
         $this->table = new Table($this->conf['table']['size']);
-        $this->table->column('task_id', Table::TYPE_INT);
-        $this->table->column('process_name', Table::TYPE_STRING, 100);
+        $this->table->column('log_id', Table::TYPE_INT, 8);
+        $this->table->column('request_id', Table::TYPE_STRING, 100);
+        $this->table->column('log_date_time', Table::TYPE_STRING, 30);
         $this->table->create();
+        $this->currentServer = $this->getMainServer();
+        $this->xxlJobServers = $this->getXXLJobServers();
+
+        //
+        $this->cacheTable = new Table($this->conf['table']['size']);
+        $this->cacheTable->column('server_info', Table::TYPE_STRING, 255);
+        $this->cacheTable->create();
+        $this->cacheTable->set('current_server', ['server_info' => $this->getMainServer()]);
+        $this->xxlJobServers = $this->getXXLJobServers();
+
+        // 报警机制
+        $this->panicTable = new Table(10);
+        // server 信息
+        $this->panicTable->column('server', Table::TYPE_STRING, 255);
+        // 告警次数
+        $this->panicTable->column('panic_times', Table::TYPE_INT, 2);
+        $this->panicTable->create();
     }
 
     /**
@@ -318,25 +353,29 @@ class TcpServer
      */
     protected function initServer()
     {
-        $this->server = new Server($this->conf['server']['host'], $this->conf['server']['port']);
-        if (!empty($this->conf['server']['process_name'])) {
-            $this->processName = $this->conf['server']['process_name'];
-        }
-        $this->server->set($this->setting);
-        // 注册回调事件
-        $this->server->on('start',   [$this, 'onStart']);
-        $this->server->on('connect', [$this, 'onConnect']);
-        $this->server->on('receive', [$this, 'onReceive']);
-        $this->server->on('close',   [$this, 'onClose']);
-        $this->server->on('managerStart', array($this, 'onManagerStart'));
+        try {
+            $this->server = new Server($this->conf['server']['host'], $this->conf['server']['port']);
+            if (!empty($this->conf['server']['process_name'])) {
+                $this->processName = $this->conf['server']['process_name'];
+            }
+            $this->server->set($this->setting);
+            // 注册回调事件
+            $this->server->on('start', [$this, 'onStart']);
+            $this->server->on('connect', [$this, 'onConnect']);
+            $this->server->on('receive', [$this, 'onReceive']);
+            $this->server->on('close', [$this, 'onClose']);
+            $this->server->on('managerStart', array($this, 'onManagerStart'));
 
-        if (isset($this->conf['setting']['worker_num'])) {
-            $this->server->on('workerStart', array($this, 'onWorkerStart'));
-        }
+            if (isset($this->conf['setting']['worker_num'])) {
+                $this->server->on('workerStart', array($this, 'onWorkerStart'));
+            }
 
-        if (isset($this->conf['setting']['task_worker_num'])) {
-            $this->server->on('Task', array($this, 'onTask'));
-            $this->server->on('Finish', array($this, 'onFinish'));
+            if (isset($this->conf['setting']['task_worker_num'])) {
+                $this->server->on('Task', array($this, 'onTask'));
+                $this->server->on('Finish', array($this, 'onFinish'));
+            }
+        } catch (\Exception $exception) {
+            echo $exception->getMessage();
         }
     }
     /**
@@ -376,7 +415,9 @@ class TcpServer
      */
     protected function shutdown()
     {
+        // 摘除注册
         $masterId = $this->getMasterPid();
+        $this->registryRemove();
         if (!$masterId) {
             $this->log("[warning] " . $this->processName . ": can not find master pid file");
             $this->log($this->processName . ": stop\033[31;40m [FAIL] \033[0m");
@@ -436,13 +477,114 @@ class TcpServer
     protected function makeTick($server)
     {
         // 定时器去注册
-        $server->tick($this->conf['xxljob']['registry_interval_ms'], function() {
-            $time = self::convertSecondToMicroS();
-            if (!empty($this->conf['xxljob']['open_registry'])) {
-                $bizCenter = new BizCenter($this->conf['xxljob']['host'], $this->conf['xxljob']['port']);
-                $bizCenter->openRegistry = $this->conf['xxljob']['open_registry'];
-                $bizCenter->registry($time, $this->conf['server']['app_name'], $this->conf['server']['host'] . ':' . $this->conf['server']['port']);
+        $server->tick($this->conf['xxljob']['registry_interval_ms'], function() use($server)  {
+            $permitPanicTimes = self::$retryTimes;
+            foreach ($this->xxlJobServers as $key => $hostInfo) {
+                $res = $this->sendToProcessor($hostInfo);
+                $formatDatetime = $this->formatDatetime(time());
+                $appName = $this->conf['server']['app_name'];
+                $address = $this->conf['server']['host'] . ':' . $this->conf['server']['port'];
+                $hKey = md5($hostInfo);
+                if ($res) {
+                    $this->availableServers[] = $hostInfo;
+                    $this->log($hostInfo);
+                    $this->panicTable->set($hKey, ['server' => $hostInfo, 'panic_times' => 0]);
+                    $this->log('[' . $formatDatetime . ']' . $appName . ':' . $address  . ' -> registry 成功' . PHP_EOL);
+                } else {
+                    $info = $this->panicTable->get($hKey);
+                    $panicTimes = empty($info['panic_times']) ? 0: $info['panic_times'];
+                    if ($panicTimes < $permitPanicTimes) {
+                        $panicTimes += 1;
+                        $this->panicTable->set($hKey, ['server' => $hostInfo, 'panic_times' => $panicTimes]);
+                        $timesec=10000*$panicTimes;
+                        $server->after($timesec, function () use ($appName, $hostInfo, $panicTimes, $timesec) {
+                            self::panic($appName, 'registry failed. Target host:' . $hostInfo . ' panic times:' . $panicTimes . ' timeafter:' . $timesec);
+                        });
+                    }
+                }
+            }
+            // 优先用主的
+            if (in_array($this->getMainServer(), $this->availableServers)) {
+                $this->setCurrentServer($this->getMainServer());
+            } else{
+                !empty($this->availableServers[0]) && $this->setCurrentServer($this->availableServers[0]);
             }
         });
+    }
+
+    /**
+     * 设置当前主server
+     *
+     * @param $hostInfo
+     */
+    protected function setCurrentServer($hostInfo)
+    {
+        $this->log('current log:' . $hostInfo);
+        /* @see Table::set()*/
+        $this->cacheTable->set('current_server', ['server_info' => $hostInfo]);
+    }
+
+    /**
+     * 获取主要的server
+     *
+     * @return string
+     */
+    protected function getMainServer()
+    {
+        return $this->conf['xxljob']['host'] . ':' . $this->conf['xxljob']['port'];
+    }
+
+
+    /**
+     * 获取所有的server
+     *
+     * @return array
+     */
+    protected function getXXLJobServers()
+    {
+        $servers = [];
+        if (!empty($this->conf['xxljob']['open_registry'])) {
+            $servers[] = $this->conf['xxljob']['host'] . ':' . $this->conf['xxljob']['port'];
+        }
+        // 备份的server
+        if (!empty($this->conf['xxljob_backup']['open_registry']) && !empty($this->conf['xxljob_backup']['host_urls'])) {
+            $hostList = explode(',', $this->conf['xxljob_backup']['host_urls']);
+            $servers = array_merge($hostList, $servers);
+        }
+        return $servers;
+    }
+
+
+    /**
+     * 注册移除
+     */
+    protected function registryRemove()
+    {
+        foreach ($this->xxlJobServers as $hostInfo) {
+            $res = $this->sendToProcessor($hostInfo, 'registryRemove');
+            $formatDatetime = $this->formatDatetime(time());
+            $appName = $this->conf['server']['app_name'];
+            $address = $this->conf['server']['host'] . ':' . $this->conf['server']['port'];
+            if ($res) {
+                $this->log($hostInfo);
+                $this->log('[' . $formatDatetime . ']' . $appName . ':' . $address  . ' -> registryRemove 成功' . PHP_EOL);
+            }
+        }
+    }
+
+    /**
+     * @param $hostInfo
+     * @param string $method
+     * @return mixed
+     */
+    protected function sendToProcessor($hostInfo, $method = 'registry')
+    {
+        $time = self::convertSecondToMicroS();
+        $bizCenter = $this->getBizCenterByHostInfo($hostInfo);
+        $bizCenter->openRegistry = 1;
+        /* @see BizCenter::registry() */
+        /* @see BizCenter::registryRemove()*/
+        $res = $bizCenter->$method($time, $this->conf['server']['app_name'], $this->conf['server']['host'] . ':' . $this->conf['server']['port']);
+        return $res;
     }
 }

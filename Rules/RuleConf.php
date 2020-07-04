@@ -22,6 +22,12 @@ class RuleConf
             'file_real_path' => ':string/ecs/application/:string/controller/:string.php',
             'identifier' => 'p'
         ],
+        'abc360' => [
+            'realDir' => 'abc360.com',
+            'router_index' => '/cli.php',
+            'file_real_path' => ':string/Application/:string/Controller/:stringController.class.php',
+            'identifier' => 'a'
+        ],
         'teen' => [
             'router_index' => '/index.php',
             'file_real_path' => ':string/Application/:string/Controller/:stringController.class.php',
@@ -36,6 +42,12 @@ class RuleConf
         ],
         'local' => [
             'identifier' => 'l'
+        ],
+        'sdk' => [
+            'realDir' => 'sdkdispatcher',
+            'router_index' => '/public/index.php',
+            'file_real_path' => ':string/application/:string/controller/:string.php',
+            'identifier' => 'd'
         ]
     ];
 
@@ -62,6 +74,10 @@ class RuleConf
      */
     public static function supportLaravelFramework($handlerInfoArr, $projectName, $conf, &$projectInfo)
     {
+        // 支持别名和真实的目录映射
+        if (!empty($projectInfo['realDir'])) {
+            $projectName = $projectInfo['realDir'];
+        }
         $indexPath = self::getIndexCommand($conf, $projectName);
 
         $indexRouterPath = $indexPath . '/' . $projectInfo['router_index'];
@@ -79,12 +95,21 @@ class RuleConf
      * @param $projectInfo
      * @return array
      */
-    public static function supportLocal($handlerInfoArr, $projectName, &$projectInfo)
+    public static function supportLocal($handlerInfoArr, $projectName, &$projectInfo, &$isShell)
     {
         $classPath = '';
-        $dirName = empty($handlerInfoArr[1]) ? 'Tests' : $handlerInfoArr[1];
+
+        if (!is_bool(stripos('shell', $handlerInfoArr[0]))) {
+            $dirName = SHELL_SCRIPT_DIR;
+            $projectName = $handlerInfoArr[1];
+            $fileExt = '.sh';
+            $isShell = true;
+        } else {
+            $dirName = empty($handlerInfoArr[1]) ? PHP_TEST_DIR : $handlerInfoArr[1];
+            $fileExt = '.php';
+        }
         $targetFilename = empty($handlerInfoArr[2]) ? $projectName : $handlerInfoArr[2];
-        $indexRouterPath = APP_PATH . '/' . $dirName . '/' . $targetFilename . '.php';
+        $indexRouterPath = $dirName . '/' . $targetFilename . $fileExt;
         $projectInfo = RuleConf::info('local');
         $projectInfo['file_real_path'] = $indexRouterPath;
 

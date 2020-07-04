@@ -31,6 +31,6 @@ class JobExecutor
      */
     public static function removeJob($jobId, Table $table)
     {
-        return $table->get($jobId);
+        return $table->del($jobId);
     }
 }

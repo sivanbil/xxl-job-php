@@ -80,16 +80,23 @@ class ExecutorCenter
      */
     public static function kill($jobId, Table $table)
     {
-        $jobInfo = JobExecutor::loadJob($jobId, $table);
         $code = Code::SUCCESS_CODE;
-        // 内存表里还有key
-        if ($jobInfo) {
-            $processName = $jobInfo['process_name'];
-            if (self::killScriptProcess($processName)) {
-                JobExecutor::removeJob($jobId, $table);
-            } else {
-                $code = Code::ERROR_CODE;
+
+        try {
+            $jobInfo = JobExecutor::loadJob($jobId, $table);
+            // 内存表里还有key
+            if (!empty($jobInfo['log_id'])) {
+                $processName = self::getTaskTag($jobInfo['log_id']);
+                self::appendLog($jobInfo['log_id'], '即将被杀掉....');
+                if (self::killScriptProcess($processName, ['logDateTime' => self::genLogTime(), 'logId' => $jobInfo['log_id']])) {
+                    self::appendLog( $jobInfo['log_id'], '被杀掉....done');
+                    JobExecutor::removeJob($jobId, $table);
+                } else {
+                    $code = Code::ERROR_CODE;
+                }
             }
+        } catch (\Exception $exception) {
+
         }
         return ['code' => $code];
     }
@@ -101,14 +108,106 @@ class ExecutorCenter
      * @param $requestId
      * @param Server $server
      */
-    public static function run($params, $requestId, Server $server)
+    public static function run($params, $requestId, Server $server, $conf, Table $table, Table $cacheTable)
     {
         foreach ($params as $param) {
             // 投递异步任务
             $param['requestId'] = $requestId;
-            self::appendLog($param['logDateTim'], $param['logId'], '调度中心执行任务参数：' . json_encode($params));
+            $settingWorkersNum = $conf['setting']['task_worker_num'];
+            $left = $param['jobId'] % $settingWorkersNum;
+            $dstWorkerNum = $left + $conf['setting']['worker_num'] - 1;
+            self::appendLog($param['logId'],  $settingWorkersNum.',dst:'.$dstWorkerNum.' ,调度中心执行任务参数：' . json_encode($params));
+            $handleParams = self::getHandlerParams($param, $conf);
+            self::appendLog($param['logId'],  ' server stats:' . json_encode($server->stats()));
 
-            $server->task($param);
+            $exist = true;
+            $existInfo = $table->get($param['jobId']);
+            if ($existInfo) {
+                self::appendLog($param['logId'], '当前exist:' . json_encode([$existInfo]));
+            } else {
+                $exist = false;
+            }
+
+            // 丢弃下一个
+            if ($exist && $param['executorBlockStrategy'] == JobStrategy::DISCARD_NEXT_SCHEDULING) {
+                self::appendLog($param['logId'], '【'.JobStrategy::DISCARD_NEXT_SCHEDULING.'】此task因策略需要被丢弃：' . json_encode($params));
+                return JobStrategy::discard($param, $cacheTable, self::$retryTimes);
+            }
+
+            // 丢弃之前的使用新的
+            if ($exist && $param['executorBlockStrategy'] == JobStrategy::USE_NEXT_SCHEDULING) {
+                self::appendLog($existInfo['log_id'], '【'.JobStrategy::USE_NEXT_SCHEDULING.'】因下一个任务丢弃:' . json_encode($param));
+                JobStrategy::coverEarly($existInfo, $param, $table, $cacheTable, self::$retryTimes);
+            }
+
+            self::appendLog($param['logId'], '开始投递任务，task_worker开始处理');
+            $table->set($param['jobId'], ['log_id' => $param['logId'], 'request_id' => $param['requestId'], 'log_date_time' => strval($param['logDateTim'])]);
+            // 指定task_worker 并直接触发onFinish
+            $server->task(['job_data' => $param, 'params' => $handleParams], $dstWorkerNum);
+//            $server->task(['job_data' => $param, 'params' => $handleParams], $dstWorkerNum, function(Server $server, $task_id, $data) use($table, $param, $cacheTable) {
+//                $data = json_decode($data, true);
+//                $time = self::convertSecondToMicroS();
+//                $logId = $data['log_id'];
+//                $logTime = $data['log_date_time'];
+//                $requestId = $data['request_id'];
+//                $executeResult = [
+//                    'code' => Code::SUCCESS_CODE,
+//                    'msg'  => '脚本执行完成，结束脚本运行',
+//                ];
+//                if (isset($data['exec_result_msg']) && $data['exec_result_msg']) {
+//                    $searchResult = stripos(strtolower($data['exec_result_msg']), 'success');
+//                    // 没找到则执行有问题
+//                    if (is_bool($searchResult)) {
+//                        $executeResult['code'] = Code::ERROR_CODE;
+//                    }
+//                    $executeResult['content'] =  $data['exec_result_msg'];
+//                    // 追加执行结果
+//                    self::appendLog($data['log_id'], '脚本执行结果:' . $data['exec_result_msg']);
+//                }
+//                // 结果回调
+//                $retryTimes = self::$retryTimes;
+//                while ($retryTimes > 0) {
+//                    $currentServer = self::getCurrentServer($cacheTable);
+//                    self::appendLog($data['log_id'], $currentServer);
+//                    $bizCenter = self::getBizCenterByHostInfo($currentServer);
+//                    $result = $bizCenter->callback($time, $logId, $requestId, $logTime, $executeResult);
+//                    if ($result) {
+//                        self::appendLog($data['log_id'], $currentServer . '执行完成,task回调:' . json_encode([$result, $bizCenter->getHost()]));
+//                        $table->del($data['job_id']);
+//                        $retryTimes = 0;
+//                    } else {
+//                        $retryTimes--;
+//                        self::appendLog($data['log_id'], $currentServer . '执行完成,task回调失败:' . json_encode([$result, $bizCenter->getHost()]));
+//                        sleep(20);
+//                    }
+//                }
+//            });
+//
+        }
+    }
+
+    /**
+     * 触发任务运行
+     *
+     *
+     * @param $params
+     * @param $requestId
+     * @param Server $server
+     */
+    public static function run1($params, $requestId, Server $server, $conf)
+    {
+        foreach ($params as $param) {
+            // 投递异步任务
+            $param['requestId'] = $requestId;
+            $settingWorkersNum = $conf['setting']['task_worker_num'];
+            $left = $param['jobId'] % $settingWorkersNum;
+            $dstWorkerNum = $left + $conf['setting']['worker_num'] - 1;
+            self::appendLog($param['logId'], $settingWorkersNum.',dst:'.$dstWorkerNum.' ,调度中心执行任务参数：' . json_encode($params)  . ' server stats:' . json_encode($server->stats()));
+            $server->task($param, $dstWorkerNum);
+
+
+
+
         }
     }
 }

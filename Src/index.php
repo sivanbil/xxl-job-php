@@ -1,4 +1,7 @@
 <?php
+
+use Lib\Loader;
+use Lib\TcpServer;
 /**
  * 执行器执行入口文件
  * User: Sivan
@@ -14,6 +17,10 @@ define('PHP_RUN_MODE', 'cli');
 define('CLI_PARAM_IDENTIFY', '-');
 
 define('APP_PATH', dirname(__DIR__));
+// php test脚本目录
+define('PHP_TEST_DIR', APP_PATH . '/' . 'Tests');
+// 支持shell脚本目录
+define('SHELL_SCRIPT_DIR', APP_PATH . '/' . 'Shells');
 
 define('LIB_PATH', APP_PATH . '/Lib');
 
@@ -27,14 +34,14 @@ define('RULES_PATH', APP_PATH . '/Rules');
 
 // 注册顶层命名空间到自动载入器
 require_once(LIB_PATH . '/Loader.php');
-\Lib\Loader::setRootNS('Lib', LIB_PATH);
-\Lib\Loader::setRootNS('Rules', RULES_PATH);
+Loader::setRootNS('Lib', LIB_PATH);
+Loader::setRootNS('Rules', RULES_PATH);
 spl_autoload_register('\\Lib\\Loader::autoload');
 
 $conf = json_decode($argv[1], true);
 $cmd = $argv[2];
 // init executor server
-$server = new \Lib\TcpServer($conf);
+$server = new TcpServer($conf);
 // process 名称设置 mac下安全设置
 $server->setProcessName($conf['server']['process_name']);
 // 启动server

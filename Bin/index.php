@@ -1,4 +1,6 @@
 <?php
+use Lib\Loader;
+use Lib\Executor\Cmd;
 date_default_timezone_set("PRC");
 
 /**
@@ -35,7 +37,7 @@ define("BL", "<br />" . NL);
 
 // 注册顶层命名空间到自动载入器
 require_once(LIB_PATH . '/Loader.php');
-\Lib\Loader::setRootNS('Lib', LIB_PATH);
+Loader::setRootNS('Lib', LIB_PATH);
 spl_autoload_register('\\Lib\\Loader::autoload');
 
 // cli模式参数执行
@@ -52,10 +54,10 @@ if (empty($argv[2])) {
 $processName = empty($argv[3]) ? '' : $argv[3];
 
 // 检测参数
-if (\Lib\Executor\Cmd::checkArgvValid($cmd, $name)) {
+if (Cmd::checkArgvValid($cmd, $name)) {
     // 命令执行
-    \Lib\Executor\Cmd::exec($cmd, $name, $processName);
+    Cmd::exec($cmd, $name, $processName);
 } else {
     // 操作提示
-    \Lib\Executor\Cmd::tips();
+    Cmd::tips();
 }

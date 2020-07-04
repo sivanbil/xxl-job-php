@@ -24,27 +24,13 @@ class CmdProcess
             $worker->exec($confInfo['server']['php'], [SRC_PATH . "/index.php", json_encode($confInfo), $cmd]);
         }, false);
         $process->start();
+        method_exists($process, 'setBlocking') && $process->setBlocking(true);
         // 结束的子进程回收
         $wait_res = Process::wait();
         if ($wait_res['code']) {
             echo  "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
             return false;
         }
-        return true;
-    }
-
-    /**
-     * 发信号
-     *
-     * @param $conf_info
-     * @param $cmd
-     * @return bool
-     */
-    public static function sendSignal($conf_info, $cmd)
-    {
-        $client = new Client(SWOOLE_SOCK_TCP);
-        $client->connect($conf_info['server']['ip'], $conf_info['server']['port']);
-
         return true;
     }
 

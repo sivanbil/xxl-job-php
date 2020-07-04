@@ -7,6 +7,8 @@
  */
 namespace Lib\Common;
 
+use Lib\Core\Table;
+use Lib\Executor\BizCenter;
 use Lib\Executor\CmdProcess;
 use Lib\Core\Client;
 use Lib\Core\Server;
@@ -14,6 +16,7 @@ use Rules\RuleConf;
 
 trait JobTool
 {
+    protected static $retryTimes = 3;
     /**
      * 整型转字节数组 用于通信协议拼上返回数据
      *
@@ -191,13 +194,13 @@ trait JobTool
     /**
      * 追加执行日志
      *
-     * @param $logtTime
      * @param $logId
      * @param $content
      */
-    public static function appendLog($logtTime, $logId, $content)
+    public static function appendLog($logId, $content)
     {
-        $filename = self::makeLogFileName($logtTime, $logId);
+        $logTime = self::genLogTime();
+        $filename = self::makeLogFileName($logTime, $logId);
         $handle = fopen($filename, "a+");
         $date = date('Y-m-d H:i:s', time());
         fwrite($handle, '【' . $date . '】' .$content . "\n");
@@ -253,14 +256,18 @@ trait JobTool
      */
     public static function sendCmdToSock($cmd, $name)
     {
-        $client = new Client(SWOOLE_UNIX_STREAM, SWOOLE_SOCK_SYNC);
-        $client->connect(UNIX_SOCK_PATH, 0, 10);
-        $client->send(json_encode(['cmd' => $cmd, 'name' => $name]));
-        $ret = $client->recv();
-        $ret = json_decode($ret, true);
-        $client->close();
+        try {
+            $client = new Client(SWOOLE_UNIX_STREAM, SWOOLE_SOCK_SYNC);
+            $client->connect(UNIX_SOCK_PATH, 0, 10);
+            $client->send(json_encode(['cmd' => $cmd, 'name' => $name]));
+            $ret = $client->recv();
+            $ret = json_decode($ret, true);
+            $client->close();
 
-        return $ret;
+            return $ret;
+        } catch (\Exception $exception) {
+            echo $exception->getMessage();die;
+        }
     }
 
     /**
@@ -362,20 +369,24 @@ trait JobTool
      * @param $name
      * @return string
      */
-    public static function killScriptProcess($name)
+    public static function killScriptProcess($name, $data)
     {
+        $name = trim($name, '-');
         $ret = system("ps aux | grep '" . $name . "' | grep -v grep ");
         preg_match('/\d+/', $ret, $match);//匹配出来进程号
+        self::appendLog($data['logId'], "执行的命令: ps aux | grep '" . $name . "' | grep -v grep  -> result:" . json_encode($match));
         if (!empty($match[0])) {
             $serverId = $match[0];
-            if (posix_kill($serverId, 15)) {
+            $result = posix_kill($serverId, 15);
+            self::appendLog($data['logId'], "kill result:" . json_encode([$result, $serverId, 15]));
+            if ($result) {
                 //如果成功了
                 return true;
             } else {
                 return false;
             }
         }
-        return false;
+        return true;
     }
 
     /**
@@ -414,20 +425,28 @@ trait JobTool
         // 项目地址
         $projectName = $handlerInfoArr[0];
         $projectInfo = RuleConf::info($projectName);
-
+        !empty($projectInfo['realDir']) && $projectName = $projectInfo['realDir'];
         $runMode = empty($projectInfo['run_mode']) ? PHP_RUN_MODE : $projectInfo['run_mode'];
         // 拼成可以调用脚本的样子
+        $isShell = false;
         if ((empty($handlerInfoArr[3]) && empty($projectInfo['run_mode'])) || empty($projectInfo)) {
             // php执行器本地的Tests测试脚本
-            $params = RuleConf::supportLocal($handlerInfoArr, $projectName, $projectInfo);
+            $params = RuleConf::supportLocal($handlerInfoArr, $projectName, $projectInfo, $isShell);
         } elseif (RuleConf::ARTISAN_MODE === strtolower($handlerInfoArr[1]) && strtolower($handlerInfoArr[2]) === RuleConf::LARAVEL_COMMAND_NAME_IDENTIFIER) {
             // laravel 框架支持
             $params = RuleConf::supportLaravelFramework($handlerInfoArr, $projectName, $conf, $projectInfo);
-        } else {
+        } elseif (PHP_RUN_MODE === $runMode) {
             // 支持其他框架
             $params = RuleConf::supportCommonFramework($handlerInfoArr, $projectName, $conf, $projectInfo);
+        } else {
+            //throw new \Exception('not support');
+            self::appendLog($data['logId'], $projectInfo['file_real_path'] . ' not support.');
         }
 
+        if (!file_exists($projectInfo['file_real_path'])) {
+            //throw new \Exception($projectInfo['file_real_path'] . ' not exists.');
+            self::appendLog($data['logId'], $projectInfo['file_real_path'] . ' not exists.');
+        }
         // 带执行参数
         if ($data['executorParams']) {
             $paramsKeyValues = explode('&', $data['executorParams']);
@@ -436,10 +455,9 @@ trait JobTool
                 $params[] = $paramIdentifier . $paramsKeyValue;
             }
         }
+        self::appendLog($data['logId'], 'handle params过程中projectInfo信息：' . json_encode($projectInfo));
 
-        self::appendLog($data['logDateTim'], $data['logId'], 'handle params过程中projectInfo信息：' . json_encode($projectInfo));
-
-        return ['params' => $params, 'queue_key' => ftok($projectInfo['file_real_path'], $projectInfo['identifier'])];
+        return ['params' => $params, 'queue_key' => ftok($projectInfo['file_real_path'], $projectInfo['identifier']), 'is_shell' => $isShell];
     }
 
     /**
@@ -465,5 +483,60 @@ trait JobTool
     public static function formatDatetime($time, $format = 'Y-m-d H:i:s')
     {
         return date($format, $time);
+    }
+
+    public static function getTaskTag($logId)
+    {
+        return "-logId={$logId}";
+    }
+
+    public static function genLogTime()
+    {
+        return time() * 1000;
+    }
+
+    /**
+     * @param $appName
+     * @param $content
+     * @return false|string
+     */
+    public static function panic($appName, $content)
+    {
+        try {
+            $content = '【'.$appName.'】紧急问题上报，需要尽快处理： ' . $content;
+            $dataParam = [
+                'msgtype' => 'text',
+                'text' => [
+                    'content' => $content
+                ],
+                'at' => [
+                    'atMobiles' => AlertConst::MOBILES,
+                    'isAtAll' => false
+                ]
+            ];
+            $content = array(
+                'http' => array(
+                    'method' => 'POST',
+                    'header' => 'Content-Type: application/json',
+                    'content' => json_encode($dataParam)
+                )
+            );
+            return @file_get_contents(AlertConst::DING_API_URL, false, stream_context_create($content));
+        } catch (\Exception $exception) {
+
+        }
+    }
+
+    public static function getBizCenterByHostInfo($hostInfo)
+    {
+        $hostArr = explode(':', $hostInfo);
+        $bizCenter = new BizCenter($hostArr[0], $hostArr[1]);
+        return $bizCenter;
+    }
+
+    public static function getCurrentServer(Table $cacheTable)
+    {
+        $info = $cacheTable->get('current_server');
+        return $info['server_info'];
     }
 }

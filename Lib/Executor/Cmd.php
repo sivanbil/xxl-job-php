@@ -40,25 +40,16 @@ class Cmd
         if ($processName) {
             $serverInfo['conf']['server']['process_name'] = $processName;
         }
-        $bizCenter = null;
-        if (!empty($serverInfo['conf']['xxljob']['open_registry'])) {
-            $bizCenter = new BizCenter($serverInfo['conf']['xxljob']['host'], $serverInfo['conf']['xxljob']['port']);
+        $processExists = CmdProcess::processCheckExist();
+        if ($cmd == 'start' &&  $processExists) {
+            echo 'Server is Running, Please check ' . PHP_EOL;
+            exit;
         }
         // 进程检测
-        if (CmdProcess::processCheckExist()) {
+        if ($processExists) {
             // reload stop restart
             $return = self::sendCmdToSock($cmd, $name);
-
             if ($cmd == 'stop') {
-
-                // 调度中心rpc实例化
-                $time = self::convertSecondToMicroS();
-                if ($bizCenter && !empty($serverInfo['conf']['xxljob']['open_registry'])) {
-                    $bizCenter->openRegistry = $serverInfo['conf']['xxljob']['open_registry'];
-                    // 先移除
-                    $bizCenter->registryRemove($time, $serverInfo['conf']['server']['app_name'], $serverInfo['conf']['server']['host'] . ':' . $serverInfo['conf']['server']['port']);
-                }
-
                 // 获取status 之后去杀掉进程
                 if ($return['code'] == Code::SUCCESS_CODE) {
                     // 先杀掉所有的run server
@@ -106,13 +97,6 @@ class Cmd
                 if (CmdProcess::execute($serverInfo['conf'], $cmd)) {
                     $runningServers[$name] = ['server_info' => $serverInfo, 'name' => $name];
                     self::startServerSock($runningServers);
-                    // 调度中心rpc实例化
-                    $time = self::convertSecondToMicroS();
-                    if (!empty($serverInfo['conf']['xxljob']['open_registry'])) {
-                        $bizCenter->openRegistry = $serverInfo['conf']['xxljob']['open_registry'];
-                        // 第一次注册
-                        $bizCenter->registry($time, $serverInfo['conf']['server']['app_name'], $serverInfo['conf']['server']['host'] . ':' . $serverInfo['conf']['server']['port']);
-                    }
                 }
             } else {
                 if ($cmd == 'shutdown' || $cmd == 'status' || $cmd == 'stop' || $cmd == 'restart') {
