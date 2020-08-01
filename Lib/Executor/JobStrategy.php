@@ -72,8 +72,7 @@ class JobStrategy
         $process->push(json_encode($params['params']));
         $wait_res = Process::wait();
         if ($wait_res['code']) {
-            $execResultMsg = "\033[31;40m [FAIL] \033[0m" . PHP_EOL;
-
+            $execResultMsg = 'failed. wait res:' . json_encode($wait_res);
             return json_encode([
                 'job_id' => $data['jobId'],
                 'request_id' => $data['requestId'],

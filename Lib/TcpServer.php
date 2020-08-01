@@ -101,7 +101,7 @@ class TcpServer
                 $this->table->count();
                 break;
             default:
-                echo 'Usage:php index.php start | stop | reload | restart | status | help' . PHP_EOL;
+                echo 'Usage:php Bin/index.php start | stop | reload | restart | status | help' . PHP_EOL;
                 break;
         }
     }
@@ -215,6 +215,7 @@ class TcpServer
     public function onTask(Server $server, $taskId, $fromId, $taskData)
     {
         $data = $taskData['job_data'];
+        self::appendLog($data['logId'], 'task_worker开始处理..');
         try {
             $params = $taskData['params'];
             // 按照队列执行
